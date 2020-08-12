@@ -1,0 +1,22 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Release.Name }}-web-service-config
+  labels:
+    heritage: {{ .Release.Service }}
+    release: {{ .Release.Name }}
+    chart: {{ .Chart.Name }}-{{ .Chart.Version }}
+    app: {{ .Release.Name }}
+data:
+  app.conf: |
+    REDIS_PORT = 1234
+    REDIS_HOST = "localhost"
+    HOSTNAME = "{{ .Values.webService.host }}"
+    GLOBUS_CLIENT = "{{ .Values.webService.globusClient }}"
+    GLOBUS_KEY = "{{ .Values.webService.globusKey }}"
+
+    DB_NAME = "{{ .Values.postgresql.postgresqlDatabase }}"
+    DB_USER = "{{ .Values.postgresql.postgresqlUsername }}"
+    DB_PASSWORD = "{{ .Values.postgresql.postgresqlPassword }}"
+    DB_HOST = "{{ .Release.Name }}-postgresql"
+
