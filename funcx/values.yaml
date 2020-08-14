@@ -7,6 +7,11 @@ webService:
   image: funcx/web-service
   tag: 201_cleanup_repo
   pullPolicy: IfNotPresent
+
+  dbSetupImage: funcx/web-service-db
+  dbSetupTag: 213_helm_chart
+  dbSetupPullPolicy: IfNotPresent
+
   replicas: 1
   host: localhost
   globusClient: <<your app client>>
@@ -19,9 +24,17 @@ postgresql:
   postgresqlUsername: funcx
   postgresqlPassword: leftfoot1
   postgresqlDatabase: public
-  initdbScriptsConfigMap: "{{ .Release.Name }}-init-scripts"
 
   persistence:
     enabled: false
+
+redis:
+  usePassword: false
+  master:
+    persistence:
+      enabled: false
+  slave:
+    persistence:
+      enabled: false
 
 

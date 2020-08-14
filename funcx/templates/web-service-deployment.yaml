@@ -18,6 +18,14 @@ spec:
         env:
           - name: PG_URI
             value: 'postgresql://{{  .Values.postgresql.postgresqlUsername }}:{{ .Values.postgresql.postgresqlPassword }}@{{ .Release.Name }}-postgresql:5432/{{ .Values.postgresql.postgresqlDatabase }}'
+      - name: create-database
+        image: {{ .Values.webService.dbSetupImage }}:{{ .Values.webService.dbSetupTag }}
+        imagePullPolicy: {{ .Values.webService.dbSetupPullPolicy }}
+        env:
+          - name: PGPASSWORD
+            value: "{{ .Values.postgresql.postgresqlPassword }}"
+          - name: POSTGRES_HOST
+            value: "{{ .Release.Name }}-postgresql"
       containers:
       - name: {{ .Release.Name }}-funcx-web-service
         image: {{ .Values.webService.image }}:{{ .Values.webService.tag }}
