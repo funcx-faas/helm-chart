@@ -1,11 +1,12 @@
 # Default values for funcx.
 # This is a YAML-formatted file.
-# Declare variables to be passed into your templates.
+ingress:
+  enabled: false
+  host: uc.ssl-hep.org
 
-replicaCount: 1
 webService:
   image: funcx/web-service
-  tag: 201_cleanup_repo
+  tag: 213_helm_chart
   pullPolicy: IfNotPresent
 
   dbSetupImage: funcx/web-service-db

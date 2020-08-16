@@ -1,0 +1,19 @@
+{{- if .Values.ingress.enabled -}}
+apiVersion: extensions/v1beta1
+kind: Ingress
+metadata:
+  annotations:
+    kubernetes.io/ingress.class: nginx
+  labels:
+    app: {{ .Release.Name }}-funcx
+  name: {{ .Release.Name }}-funcx-ingress
+spec:
+  rules:
+  - host: {{ .Release.Name }}-funcx.{{ .Values.ingress.host }}
+    http:
+      paths:
+      - path: /
+        backend:
+          serviceName: {{ .Release.Name }}-funcx-web-service
+          servicePort: 8000
+{{- end }}
