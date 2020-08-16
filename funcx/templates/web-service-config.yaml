@@ -9,8 +9,8 @@ metadata:
     app: {{ .Release.Name }}
 data:
   app.conf: |
-    REDIS_PORT = 1234
-    REDIS_HOST = "localhost"
+    REDIS_PORT = 6379
+    REDIS_HOST = "{{ .Release.Name }}-redis-master"
     HOSTNAME = "{{ .Values.webService.host }}"
     GLOBUS_CLIENT = "{{ .Values.webService.globusClient }}"
     GLOBUS_KEY = "{{ .Values.webService.globusKey }}"
