@@ -1,1 +1,15 @@
-1. Get the application URL by running these commands:
+FuncX Deployed.
+It will take a few seconds for postgres and redis to start up. You can monitor
+progress via the command
+
+    kubectl get pods --namespace {{ .Release.Namespace }}
+
+To access the REST server you will need to run a Kubernetes Port-Forward:
+
+{{- if .Values.ingress.enabled -}}
+Your service will be waiting for you at http://{{ .Release.Name }}-funcx.{{ .Values.ingress.host }}
+{{- else }}
+  export POD_NAME=$(kubectl get pods --namespace {{ .Release.Namespace }} -l "app={{ .Release.Name }}-funcx-web-service" -o jsonpath="{.items[0].metadata.name}")
+  kubectl port-forward $POD_NAME 5000:5000
+{{- end }}
+

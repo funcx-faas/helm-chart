@@ -14,7 +14,6 @@ webService:
   dbSetupPullPolicy: IfNotPresent
 
   replicas: 1
-  host: localhost
   globusClient: <<your app client>>
   globusKey: <<your app key>>
 
@@ -27,7 +26,7 @@ postgresql:
   postgresqlDatabase: public
 
   persistence:
-    enabled: false
+    enabled: true
 
 redis:
   usePassword: false
