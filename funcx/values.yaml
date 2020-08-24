@@ -17,6 +17,16 @@ webService:
   globusClient: <<your app client>>
   globusKey: <<your app key>>
 
+forwarderIP: host.docker.internal
+
+endpoint:
+  enabled: true
+  image: funcx/kube-endpoint
+  tag: 213_helm_chart
+  pullPolicy: IfNotPresent
+  replicas: 1
+
+
 postgres:
   enabled: true
 

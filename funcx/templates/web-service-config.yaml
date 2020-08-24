@@ -20,3 +20,4 @@ data:
     DB_PASSWORD = "{{ .Values.postgresql.postgresqlPassword }}"
     DB_HOST = "{{ .Release.Name }}-postgresql"
 
+    FORWARDER_IP = "{{ .Values.forwarderIP }}"
