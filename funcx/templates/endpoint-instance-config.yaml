@@ -21,5 +21,6 @@ data:
             max_blocks=1,
         ),
         max_workers_per_node=2,
+        funcx_service_address="http://{{ .Release.Name }}-funcx-web-service:8000/v1"
     )
 {{- end }}
