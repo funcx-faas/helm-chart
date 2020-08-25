@@ -7,32 +7,15 @@ Helm Chart for Deploying funcX stack
  
 This application includes:
 * FuncX Web-Service
+* Kuberentes endpoint
 * Postgres database
 * Redis Shared Data Structure
 
-## How to Install FuncX
-1. Make a clone of this repository
-2. Download subcharts:
-    ```shell script
-     helm dependency update funcx               
-    ```
-3. Create your own `values.yaml` inside the Git ignored 
-directory `deployed_values/`
-4. Obtain Globus Client ID and Secret. Paste them into your values.yaml as
-    ```yaml
-    webService:
-      globusClient: <<your app client>>
-      globusKey: <<your app secret>>
-    ```
-5. Install the helm chart:
-    ```shell script
-    helm install -f deployed_values/values.yaml funcx funcx
-    ```
-6. You can access your web service through the ingres or via a port forward 
-to the web service pod. Instructions are provided in the displayed notes.
+## Preliminaries
+The following dependencies must be set up before you can deploy the helm chart:
 
 ## Kubernetes Endpoint 
-We can deploy the kubernetes endpoint as a pod as part of this deployment. It 
+We can deploy the kubernetes endpoint as a pod as part of the chart. It 
 needs to have a valid copy of the funcx's `funcx_sdk_tokens.json` which can 
 be created by running on your local workstation and running
 ```shell script
@@ -48,8 +31,43 @@ secret named `funcx-sdk-tokens`.
 
 You can install this secret with:
 ```shell script
-kubectl create secret generic funcx-sdk-tokens --from-file=~/.funcx/credentials/funcx_sdk_tokens.json
+pushd ~/.funcx 
+kubectl create secret generic funcx-sdk-tokens --from-file=credentials/funcx_sdk_tokens.json
+popd
 ```
+
+### Forwarder
+The forwarder needs to be able to open and manage arbitrary ports which is 
+not compatible with some of Kubernetes requirements. For now we will run it
+as a docker container, but outside of the cluster.
+
+Launch a copy of forwarder outside of kubernetes, listening on port 8080:
+    ```shell script
+     docker run --rm -it -p 8080:3031 funcx/forwarder:213_helm_chart
+    ```
+
+## How to Install FuncX
+1. Make a clone of this repository
+2. Download subcharts:
+    ```shell script
+     helm dependency update funcx               
+    ```
+3. Create your own `values.yaml` inside the Git ignored directory `deployed_values/`
+4. Obtain Globus Client ID and Secret. Paste them into your values.yaml as
+    ```yaml
+    webService:
+      globusClient: <<your app client>>
+      globusKey: <<your app secret>>
+    ```
+5. Install the helm chart:
+    ```shell script
+    helm install -f deployed_values/values.yaml funcx funcx
+    ```
+6. You can access your web service through the ingres or via a port forward 
+to the web service pod. Instructions are provided in the displayed notes.
+
+7. You should be able to see the endpoint registering with the web service
+in their respective logs, along with the forwarder log
 
 ## Database Setup
 Until we migrate the webservice to use an ORM, we need to set the database
