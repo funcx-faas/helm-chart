@@ -11,6 +11,9 @@ data:
   app.conf: |
     REDIS_PORT = 6379
     REDIS_HOST = "{{ .Release.Name }}-redis-master"
+
+    ADVERTISED_REDIS_PORT = "{{ .Values.webService.advertisedRedisPort }}"
+    ADVERTISED_REDIS_HOST = "{{ .Values.webService.advertisedRedisHost }}"
     HOSTNAME = "Not Used"
     GLOBUS_CLIENT = "{{ .Values.webService.globusClient }}"
     GLOBUS_KEY = "{{ .Values.webService.globusKey }}"

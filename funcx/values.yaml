@@ -6,12 +6,15 @@ ingress:
 
 webService:
   image: funcx/web-service
-  tag: 213_helm_chart
+  tag: dev
   pullPolicy: IfNotPresent
 
   dbSetupImage: funcx/web-service-db
-  dbSetupTag: 213_helm_chart
+  dbSetupTag: dev
   dbSetupPullPolicy: IfNotPresent
+
+  advertisedRedisPort: 6379
+  advertisedRedisHost: localhost
 
   replicas: 1
   globusClient: <<your app client>>
@@ -22,7 +25,7 @@ forwarderIP: host.docker.internal
 endpoint:
   enabled: true
   image: funcx/kube-endpoint
-  tag: 213_helm_chart
+  tag: dev
   pullPolicy: IfNotPresent
   replicas: 1
 

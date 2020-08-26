@@ -87,6 +87,8 @@ configuration
 | `webService.dbSetupImage`      | Docker image name for the web service database setup image          | funcx/web-service-db |
 | `webService.dbSetupTag`        | Docker image tag for the web service database setup                 | 213_helm_chart |
 | `webService.dbSetupPullPolicy` | Kubernetes pull policy for the web service database setup container | IfNotPresent |
+| `webService.advertisedRedisPort` | Redis port that the forwarder (outside of cluster) can reach | 6379 |'
+| `webService.advertisedRedisHost` | Redis host that the forwarder (outside of cluster) can reach | localhost |'
 | `webService.globusClient`      | Client ID for globus app. Obtained from [http://developers.globus.org](http://developers.globus.org) | |
 | `webService.globusKey`         | Secret for globus app. Obtained from [http://developers.globus.org](http://developers.globus.org) | |
 | `webService.replicas`          | Number of replica web services to deploy                            | 1 |
