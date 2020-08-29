@@ -33,7 +33,7 @@ forwarder:
   tag: configurable_ic_ports
   pullPolicy: IfNotPresent
   minInterchangePort: 54000
-  maxInterchangePort: 54002
+  maxInterchangePort: 54003
 
 postgres:
   enabled: true
