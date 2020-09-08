@@ -29,6 +29,11 @@ endpoint:
   pullPolicy: IfNotPresent
   replicas: 1
 
+containerService:
+  enabled: true
+  image: funcx/container-service
+  tag: dev
+  pullPolicy: IfNotPresent
 
 postgres:
   enabled: true
