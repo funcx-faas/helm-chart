@@ -18,6 +18,12 @@ data:
     GLOBUS_CLIENT = "{{ .Values.webService.globusClient }}"
     GLOBUS_KEY = "{{ .Values.webService.globusKey }}"
 
+    {{ if .Values.postgres.enabled }}
+    SQLALCHEMY_DATABASE_URI = 'postgresql://{{  .Values.postgresql.postgresqlUsername }}:{{ .Values.postgresql.postgresqlPassword }}@{{ .Release.Name }}-postgresql:5432/{{ .Values.postgresql.postgresqlDatabase }}'
+    {{ else }}
+    SQLALCHEMY_DATABASE_URI = 'sqlite:////sqlite/app.db'
+    {{ end }}
+
     DB_NAME = "{{ .Values.postgresql.postgresqlDatabase }}"
     DB_USER = "{{ .Values.postgresql.postgresqlUsername }}"
     DB_PASSWORD = "{{ .Values.postgresql.postgresqlPassword }}"

@@ -44,7 +44,7 @@ postgresql:
   postgresqlDatabase: public
 
   persistence:
-    enabled: true
+    enabled: false
 
 redis:
   usePassword: false
