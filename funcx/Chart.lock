@@ -4,6 +4,9 @@ dependencies:
   version: 9.1.4
 - name: redis
   repository: https://charts.bitnami.com/bitnami
-  version: 10.7.*
-digest: sha256:d8c39f21bda51f8c451a0faadce9f878d69c1e0e5dd8be1e897a0dbd1a91bc29
-generated: "2020-08-15T08:41:06.001309-05:00"
+  version: 10.7.17
+- name: funcx_endpoint
+  repository: http://funcx.org/funcx-helm-charts
+  version: 0.1.0
+digest: sha256:ce7dd287154810c18984dc505248746e9982d33195d9d5c9f4043af995acfb5b
+generated: "2020-10-13T11:53:42.047289-05:00"

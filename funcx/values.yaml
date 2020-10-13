@@ -22,10 +22,10 @@ webService:
 
 endpoint:
   enabled: true
-  image: funcx/kube-endpoint
+
+funcx_endpoint:
   tag: dev
-  pullPolicy: IfNotPresent
-  replicas: 1
+  funcXServiceAddress: http://funcx-funcx-web-service:8000
 
 forwarder:
   enabled: true
