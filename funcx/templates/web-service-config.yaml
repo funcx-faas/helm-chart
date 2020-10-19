@@ -24,6 +24,8 @@ data:
     SQLALCHEMY_DATABASE_URI = 'sqlite:////sqlite/app.db'
     {{ end }}
 
+    SQLALCHEMY_TRACK_MODIFICATIONS = False
+
     DB_NAME = "{{ .Values.postgresql.postgresqlDatabase }}"
     DB_USER = "{{ .Values.postgresql.postgresqlUsername }}"
     DB_PASSWORD = "{{ .Values.postgresql.postgresqlPassword }}"
