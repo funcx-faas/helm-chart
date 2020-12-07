@@ -17,6 +17,7 @@ data:
     HOSTNAME = "Not Used"
     GLOBUS_CLIENT = "{{ .Values.webService.globusClient }}"
     GLOBUS_KEY = "{{ .Values.webService.globusKey }}"
+    FUNCX_SCOPE = "{{ .Values.webService.funcxScope }}"
 
     {{ if .Values.postgres.enabled }}
     SQLALCHEMY_DATABASE_URI = 'postgresql://{{  .Values.postgresql.postgresqlUsername }}:{{ .Values.postgresql.postgresqlPassword }}@{{ .Release.Name }}-postgresql:5432/{{ .Values.postgresql.postgresqlDatabase }}'

@@ -53,11 +53,15 @@ Launch a copy of forwarder outside of kubernetes, listening on port 8080:
      helm dependency update funcx               
     ```
 3. Create your own `values.yaml` inside the Git ignored directory `deployed_values/`
-4. Obtain Globus Client ID and Secret. Paste them into your values.yaml as
+4. Obtain Globus Client ID and Secret.  This can either be a client id and
+   secret for the production service, or for local development see section
+   below on creating a client and scope for local development.  Paste them
+   into your values.yaml as 
     ```yaml
     webService:
       globusClient: <<your app client>>
       globusKey: <<your app secret>>
+      funcxScope: <<your app scope>> # Not needed if using production client and keys
     ```
 5. Install the helm chart:
     ```shell script
@@ -121,8 +125,60 @@ postgresql.postgresqlUsername: funcx
 | postgresql | [https://github.com/bitnami/charts/tree/master/bitnami/postgresql](https://github.com/bitnami/charts/tree/master/bitnami/postgresql) |
 | redis      | [https://github.com/bitnami/charts/tree/master/bitnami/redis](https://github.com/bitnami/charts/tree/master/bitnami/redis) |
 
+## Creating client and scope 
+For local development of the web service, it can be convenient to have the
+service consume tokens from a custom non-prod client.  Additionally, using a
+custom client and scope helps to reduce the risk of production credentials
+leaking.
 
+To create a custom client, first create a Globus Auth project at 
+https://auth.globus.org/v2/web/developers.  Then, within that project, click
+"Add" and select "Add new app".  Give the app a name, leave "Native App"
+unchecked, and set the following two redirect uri's:
 
+* https://auth.globus.org/v2/web/auth-code
+* http://localhost:5000
 
+Then click "Create App".  Once back at the projects page you will see your
+"Client ID" and a button to generate a new "Client Secret".  Create the client
+secret and note both it and your client id to put in to the `values.yaml`.
 
+The final step will be to set up the required scope for your client.  You can
+do this with the globus sdk and the following example code: 
+
+``` python
+from globus_sdk import ConfidentialAppAuthClient
+
+globusClient = "<< client id from above >>"
+globusKey = "<< client secret from above >>"
+c = ConfidentialAppAuthClient(globusClient, globusKey)
+
+scope = {
+    "scope": {
+        "advertised": True,
+        "name": "funcx.org",
+        "dependent_scopes": [
+            # Allow access to globus groups
+            {
+                "optional": False,
+                "scope": "73320ffe-4cb4-4b25-a0a3-83d53d59ce4f",
+                "requires_refresh_token": True,
+            }
+        ],
+        "allows_refresh_token": True,
+        "description": "A scope for local FuncX.org development",
+        "scope_suffix": "all",
+    }
+}
+
+c.post(f"/v2/api/clients/{globusClient}/scopes", json_body=scope)
+```
+
+The response object will include a `scope_string` field that will look something like:
+
+```
+'scope_string': 'https://auth.globus.org/scopes/<< client id >>/all'
+```
+
+Use that scope string as the value for `funcxScope` in your `values.yaml`.
 
