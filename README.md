@@ -16,7 +16,51 @@ This application includes:
 ## Preliminaries
 The following dependencies must be set up before you can deploy the helm chart:
 
-## Kubernetes Endpoint
+## FuncX Endpoint
+
+There are two modes in which funcx-endpoints could be deployed:
+
+1. funcx-endpoint deployed outside k8s, connecting to hosted services in k8s
+2. funcx-endpoint deployed with k8s (broken currently)
+
+### Deploying funcx-endpoint externally
+
+Install from the `forwarder_rearch_1` branch of the [funcx repo](https://github.com/funcx-faas/funcX)
+Here are the steps to install, preferably to your active conda environment:
+
+```shell script
+git clone https://github.com/funcx-faas/funcX.git
+cd funcX
+git checkout forwarder_rearch_1
+pip install funcx_sdk
+pip install funcx_endpoint
+```
+
+Next create an endpoint configuration:
+
+```shell script
+funcx-endpoint
+```
+
+Update the configuration file to point the endpoint to locally deployed services, which we will setup in the next sections.
+
+    ```python
+    config = Config(
+    executors=[HighThroughputExecutor(
+        provider=LocalProvider(
+            init_blocks=1,
+            min_blocks=0,
+            max_blocks=1,
+        ),
+    )],
+    funcx_service_address="http://127.0.0.1:5000/api/v1", # <--- UPDATE THIS LINE
+)
+
+     ```
+### Deploying funcx-endpoint into the k8s deployment
+
+> :warning: **THIS IS BROKEN AT THE MOMENT**
+
 We can deploy the kubernetes endpoint as a pod as part of the chart. It
 needs to have a valid copy of the funcx's `funcx_sdk_tokens.json` which can
 be created by running on your local workstation and running
