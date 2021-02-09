@@ -207,7 +207,12 @@ configuration
 | `forwarder.pullPolicy`        | Kubernetes pull policy for the forwarder container                | IfNotPresent |
 | `ingress.enabled`              | Deploy an ingres to route traffic to web app?                       | false |
 | `ingress.host`                 | Host name for the ingress. You will be able to reach your web service via a url that starts with the helm release name and ends with this host | uc.ssl-hep.org |
-| `postgres.enabled`             | Deploy a postgres instance?                                         | true |
+| `services.postgres.enabled`      | Deploy postgres along with service?                             | true |
+| `services.postgres.externalURI`  | If postgres is deployed externally, what URI connects to it?    | sqlite:////sqlite/app.db |
+| `services.redis.enabled`         | Deploy redis along with service?                             | true |
+| `services.redis.externalHost`  | If redis is deployed externally, what is the host name?    |  |
+| `services.redis.externalPort`  | If redis is deployed externally, what is the port?    |  6379 |
+
 
 ## Subcharts
 This chart uses two subcharts to supply dependent services. You can update

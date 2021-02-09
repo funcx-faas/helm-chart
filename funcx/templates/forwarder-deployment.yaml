@@ -19,9 +19,17 @@ spec:
         image: {{ .Values.forwarder.image }}:{{ .Values.forwarder.tag }}
         env:
         - name: REDIS_HOST
+    {{- if .Values.services.redis.enabled }}
           value: "{{ .Release.Name }}-redis-master"
+    {{- else }}
+          value: "{{  .Values.services.redis.externalHost }}"
+    {{- end }}
         - name: REDIS_PORT
+    {{- if .Values.services.redis.enabled }}
           value: "6379"
+    {{- else }}
+          value: "{{  .Values.services.redis.externalPort }}"
+    {{- end }}
         - name: ADVERTISED_FORWARDER_ADDRESS
           valueFrom:
             fieldRef:

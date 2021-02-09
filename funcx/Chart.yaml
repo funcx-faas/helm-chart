@@ -12,10 +12,11 @@ dependencies:
   - name: postgresql
     version: 9.1.4
     repository: https://charts.bitnami.com/bitnami
-    condition: postgres.enabled
+    condition: services.postgres
   - name: redis
     version: 10.7.*
     repository: https://charts.bitnami.com/bitnami
+    condition: services.redis
   - name: funcx_endpoint
     version: 0.1.0
     repository: http://funcx.org/funcx-helm-charts

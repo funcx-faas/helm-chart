@@ -36,8 +36,16 @@ forwarder:
   resultsPort: 55002
   commandsPort: 55003
 
-postgres:
-  enabled: true
+# External services - these should be included for development environment
+# but on EKS we usually use the Amazon supported services
+services:
+  postgres:
+    enabled: true
+    externalURI: sqlite:////sqlite/app.db
+  redis:
+    enabled: true
+    externalHost:
+    externalPort: 6379
 
 postgresql:
   postgresqlUsername: funcx
