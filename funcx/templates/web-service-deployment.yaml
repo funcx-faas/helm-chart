@@ -12,12 +12,14 @@ spec:
       labels:
         app: {{ .Release.Name }}-funcx-web-service
     spec:
+    {{- if .Values.services.postgres.enabled }}
       initContainers:
       - name: check-postgresql
         image: "ncsa/checks:latest"
         env:
           - name: PG_URI
             value: 'postgresql://{{  .Values.postgresql.postgresqlUsername }}:{{ .Values.postgresql.postgresqlPassword }}@{{ .Release.Name }}-postgresql:5432/{{ .Values.postgresql.postgresqlDatabase }}'
+    {{- end }}
       containers:
       - name: {{ .Release.Name }}-funcx-web-service
         image: {{ .Values.webService.image }}:{{ .Values.webService.tag }}
