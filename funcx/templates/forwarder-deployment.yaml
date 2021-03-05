@@ -20,7 +20,7 @@ spec:
         env:
         - name: REDIS_HOST
     {{- if .Values.services.redis.enabled }}
-          value: "{{ .Release.Name }}-redis-master"
+          value: ""
     {{- else }}
           value: "{{  .Values.services.redis.externalHost }}"
     {{- end }}
