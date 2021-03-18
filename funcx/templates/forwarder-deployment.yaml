@@ -13,20 +13,35 @@ spec:
       labels:
         app: {{ .Release.Name }}-forwarder
     spec:
+      hostNetwork: true
       containers:
       - name: {{ .Release.Name }}-forwarder
         image: {{ .Values.forwarder.image }}:{{ .Values.forwarder.tag }}
         env:
         - name: REDIS_HOST
-          value: "{{ .Release.Name }}-redis-master"
+    {{- if .Values.services.redis.enabled }}
+          value: ""
+    {{- else }}
+          value: "{{  .Values.services.redis.externalHost }}"
+    {{- end }}
         - name: REDIS_PORT
+    {{- if .Values.services.redis.enabled }}
           value: "6379"
+    {{- else }}
+          value: "{{  .Values.services.redis.externalPort }}"
+    {{- end }}
+    {{- if not .Values.forwarder.useAWSMetadataServer }}
         - name: ADVERTISED_FORWARDER_ADDRESS
-          value: "{{ .Release.Name }}-forwarder"
-        - name: MIN_IC_PORT
-          value: "{{ .Values.forwarder.minInterchangePort }}"
-        - name: MAX_IC_PORT
-          value: "{{ .Values.forwarder.maxInterchangePort }}"
+          valueFrom:
+            fieldRef:
+              fieldPath: status.podIP
+    {{- end }}
+        - name: TASKS_PORT
+          value: "{{ .Values.forwarder.tasksPort }}"
+        - name: RESULTS_PORT
+          value: "{{ .Values.forwarder.resultsPort }}"
+        - name: COMMANDS_PORT
+          value: "{{ .Values.forwarder.commandsPort }}"
         tty: true
         stdin: true
         imagePullPolicy: {{ .Values.forwarder.pullPolicy }}
@@ -36,7 +51,24 @@ spec:
         {{- end }}
         ports:
           - containerPort: 8080  # Forwarder REST port
-          - containerPort: {{ .Values.forwarder.minInterchangePort }}
-          - containerPort: {{ add .Values.forwarder.minInterchangePort 1 }}
-          - containerPort: {{ add .Values.forwarder.minInterchangePort 2 }}
+          - containerPort: {{ add .Values.forwarder.tasksPort 1 }}
+            hostPort: {{ add .Values.forwarder.tasksPort 1 }}
+          - containerPort: {{ add .Values.forwarder.resultsPort 1 }}
+            hostPort: {{ add .Values.forwarder.resultsPort 1 }}
+          - containerPort: {{ add .Values.forwarder.commandsPort 1 }}
+            hostPort: {{ add .Values.forwarder.commandsPort 1 }}
+          - containerPort: 55005 # Debug
+            hostPort: 55005
+        {{- if .Values.forwarder.server_cert }}
+        volumeMounts:
+        - name: funcx-forwarder-secret
+          mountPath: /home/funcx/.curve
+          readOnly: true
+        {{- end }}
+      {{- if .Values.forwarder.server_cert }}
+      volumes:
+      - name: funcx-forwarder-secret
+        secret:
+          secretName: funcx-forwarder-secrets
+      {{- end }}
 {{- end }}

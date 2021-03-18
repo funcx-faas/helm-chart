@@ -9,8 +9,13 @@ metadata:
     app: {{ .Release.Name }}
 data:
   app.conf: |
+    {{ if .Values.services.redis.enabled }}
     REDIS_PORT = 6379
     REDIS_HOST = "{{ .Release.Name }}-redis-master"
+    {{ else }}
+    REDIS_PORT = {{  .Values.services.redis.externalPort }}
+    REDIS_HOST = "{{  .Values.services.redis.externalHost }}"
+    {{ end }}
 
     ADVERTISED_REDIS_PORT = "{{ .Values.webService.advertisedRedisPort }}"
     ADVERTISED_REDIS_HOST = "{{ .Values.webService.advertisedRedisHost }}"
@@ -18,10 +23,10 @@ data:
     GLOBUS_CLIENT = "{{ .Values.webService.globusClient }}"
     GLOBUS_KEY = "{{ .Values.webService.globusKey }}"
 
-    {{ if .Values.postgres.enabled }}
+    {{ if .Values.services.postgres.enabled }}
     SQLALCHEMY_DATABASE_URI = 'postgresql://{{  .Values.postgresql.postgresqlUsername }}:{{ .Values.postgresql.postgresqlPassword }}@{{ .Release.Name }}-postgresql:5432/{{ .Values.postgresql.postgresqlDatabase }}'
     {{ else }}
-    SQLALCHEMY_DATABASE_URI = 'sqlite:////sqlite/app.db'
+    SQLALCHEMY_DATABASE_URI = '{{  .Values.services.postgres.externalURI }}'
     {{ end }}
 
     SQLALCHEMY_TRACK_MODIFICATIONS = False
