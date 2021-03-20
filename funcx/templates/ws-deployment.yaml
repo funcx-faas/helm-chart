@@ -1,0 +1,26 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Release.Name }}-funcx-ws
+spec:
+  replicas: {{ .Values.ws.replicas }}
+  selector:
+    matchLabels:
+      app: {{ .Release.Name }}-funcx-ws
+  template:
+    metadata:
+      labels:
+        app: {{ .Release.Name }}-funcx-ws
+    spec:
+      containers:
+      - name: {{ .Release.Name }}-funcx-ws
+        image: {{ .Values.ws.image }}:{{ .Values.ws.tag }}
+        imagePullPolicy: {{ .Values.ws.pullPolicy }}
+        env:
+        - name: REDIS_HOST
+          value: "{{ .Release.Name }}-redis-master"
+        - name: REDIS_PORT
+          value: "6379"
+
+        ports:
+          - containerPort: 6000
