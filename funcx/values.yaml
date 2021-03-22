@@ -63,4 +63,7 @@ redis:
     persistence:
       enabled: false
 
-
+ws:
+  image: loonride/funcx_ws
+  tag: latest
+  pullPolicy: Always
