@@ -1,9 +1,9 @@
-AWSTemplateFormatVersion: "2010-09-09"
-Description: "FuncX"
+AWSTemplateFormatVersion: 2010-09-09
+Description: FuncX
 Parameters:
   EnvName:
     Type: String
-    Description: Name of environment (dev, production, staging, etc)
+    Description: "Name of environment (dev, production, staging, etc)"
     Default: production
   EnvType:
     Type: String
@@ -15,42 +15,39 @@ Parameters:
     Default: Production
   DomainName:
     Type: String
-    Description: Name of base domain for enviroment.  
+    Description: Name of base domain for enviroment.
     Default: www.k8s-dev.funcx.org
-
 Resources:
   ElastiCacheCacheCluster:
     Type: "AWS::ElastiCache::CacheCluster"
     Properties:
-      CacheNodeType: "cache.t3.small"
-      Engine: "redis"
-      EngineVersion: "6.0.5"
+      CacheNodeType: cache.t3.small
+      Engine: redis
+      EngineVersion: 6.0.5
       NumCacheNodes: 1
       PreferredAvailabilityZone: !GetAtt EC2Instance.AvailabilityZone
       PreferredMaintenanceWindow: "thu:08:00-thu:09:00"
-      CacheParameterGroupName: "default.redis6.x"
+      CacheParameterGroupName: default.redis6.x
       CacheSubnetGroupName: !Sub "${RDSDBInstance}-redis"
       AutoMinorVersionUpgrade: true
       VpcSecurityGroupIds:
-        - "sg-012abf0855aa23408"
+        - sg-012abf0855aa23408
       SnapshotRetentionLimit: 0
       SnapshotWindow: "03:00-04:00"
       ClusterName: !Sub "${RDSDBInstance}-001"
-
   ElastiCacheReplicationGroup:
     Type: "AWS::ElastiCache::ReplicationGroup"
     Properties:
       ReplicationGroupId: !Ref RDSDBInstance
-      ReplicationGroupDescription: "funcX Dev Redis cluster"
+      ReplicationGroupDescription: funcX Dev Redis cluster
       NumNodeGroups: 1
       AutomaticFailoverEnabled: false
       SnapshotRetentionLimit: 0
       SnapshotWindow: "03:00-04:00"
-      CacheNodeType: "cache.t3.small"
+      CacheNodeType: cache.t3.small
       TransitEncryptionEnabled: false
       AtRestEncryptionEnabled: false
       MultiAZ: false
-
   EKSCluster:
     Type: "AWS::EKS::Cluster"
     Properties:
@@ -65,18 +62,17 @@ Resources:
           - !Ref EC2Subnet4
           - !Ref EC2Subnet
       KubernetesNetworkConfig:
-        ServiceIpv4Cidr: "10.100.0.0/16"
-
+        ServiceIpv4Cidr: 10.100.0.0/16
   RDSDBInstance:
     Type: "AWS::RDS::DBInstance"
     DeletionPolicy: Retain
     Properties:
-      DBInstanceIdentifier: "funcx-dev"
+      DBInstanceIdentifier: funcx-dev
       AllocatedStorage: 20
-      DBInstanceClass: "db.t3.micro"
-      Engine: "postgres"
-      MasterUsername: "postgres"
-      MasterUserPassword: "REPLACEME"
+      DBInstanceClass: db.t3.micro
+      Engine: postgres
+      MasterUsername: postgres
+      MasterUserPassword: REPLACEME
       PreferredBackupWindow: "07:00-07:30"
       BackupRetentionPeriod: 7
       AvailabilityZone: !GetAtt EC2Instance.AvailabilityZone
@@ -84,81 +80,38 @@ Resources:
       MultiAZ: false
       EngineVersion: "12.5"
       AutoMinorVersionUpgrade: true
-      LicenseModel: "postgresql-license"
+      LicenseModel: postgresql-license
       PubliclyAccessible: true
-      StorageType: "gp2"
+      StorageType: gp2
       Port: 5432
       StorageEncrypted: true
-      KmsKeyId: "arn:aws:kms:us-east-1:512084481048:key/64a46dff-2e95-4177-81be-a5b0f4cee5a9"
+      KmsKeyId: >-
+        arn:aws:kms:us-east-1:512084481048:key/64a46dff-2e95-4177-81be-a5b0f4cee5a9
       CopyTagsToSnapshot: true
       MonitoringInterval: 60
       EnableIAMDatabaseAuthentication: false
       EnablePerformanceInsights: true
-      PerformanceInsightsKMSKeyId: "arn:aws:kms:us-east-1:512084481048:key/64a46dff-2e95-4177-81be-a5b0f4cee5a9"
+      PerformanceInsightsKMSKeyId: >-
+        arn:aws:kms:us-east-1:512084481048:key/64a46dff-2e95-4177-81be-a5b0f4cee5a9
       PerformanceInsightsRetentionPeriod: 7
       DeletionProtection: false
       DBSubnetGroupName: !Sub "default-${EC2VPC}"
       VPCSecurityGroups:
         - !Ref EC2SecurityGroup2
       MaxAllocatedStorage: 1000
-      DBParameterGroupName: "default.postgres12"
+      DBParameterGroupName: default.postgres12
       OptionGroupName: "default:postgres-12"
       MonitoringRoleArn: !GetAtt IAMRole14.Arn
-      CACertificateIdentifier: "rds-ca-2019"
-
+      CACertificateIdentifier: rds-ca-2019
   S3Bucket:
     Type: "AWS::S3::Bucket"
     Properties:
-      BucketName: "512084481048-dlt-utilization"
-
-  CertificateManagerCertificate:
-    Type: "AWS::CertificateManager::Certificate"
-    Properties:
-      DomainName: "www.k8s-dev.funcx.org"
-      SubjectAlternativeNames:
-        - "www.k8s-dev.funcx.org"
-      DomainValidationOptions:
-        - DomainName: "www.k8s-dev.funcx.org"
-          ValidationDomain: "funcx.org"
-      CertificateTransparencyLoggingPreference: "ENABLED"
-
-  EventsRule:
-    Type: "AWS::Events::Rule"
-    Properties:
-      Name: "AwsConfigForwarder"
-      Description: "Forwards AwsConfig events to the Ops event bus"
-      EventPattern: '{"source":["aws.config"]}'
-      State: "ENABLED"
-      Targets:
-        - Arn: "arn:aws:events:us-east-1:280831789029:event-bus/default"
-          Id: "Id394948094320"
-          RoleArn: !GetAtt IAMRole9.Arn
-      EventBusName: "default"
-
-  EventsRule2:
-    Type: "AWS::Events::Rule"
-    Properties:
-      Name: "AutoScalingManagedRule"
-      Description: "This rule is used to route Instance notifications to EC2 Auto Scaling"
-      EventPattern: '{"source":["aws.ec2"],"detail-type":["EC2 Instance Rebalance Recommendation","EC2 Spot Instance Interruption Warning"]}'
-      State: "ENABLED"
-      Targets:
-        - Arn: "arn:aws:autoscaling:us-east-1:::"
-          Id: "autoscaling"
-      EventBusName: "default"
-
-  IAMManagedPolicy:
-    Type: "AWS::IAM::ManagedPolicy"
-    Properties:
-      ManagedPolicyName: "IAM-general-JenkinsSsmManagerPolicy-1ML4MEB0NX2CH"
-      Path: "/"
-      PolicyDocument: '{"Version":"2012-10-17","Statement":[{"Action":["ssm:PutParameter","ssm:AddTagsToResource","ssm:GetParameters"],"Resource":"arn:aws:ssm:*:*:parameter/globus/ami/*","Effect":"Allow","Sid":"UpdateSSM"},{"Action":"ssm:DescribeParameters","Resource":"*","Effect":"Allow","Sid":"DescribeParameters"},{"Action":["ec2:DescribeImages","ec2:DescribeSnapshotAttribute","ec2:DescribeImageAttribute","ec2:DescribeSnapshots"],"Resource":"*","Effect":"Allow","Sid":"Ec2DescribeImages"}]}'
-
+      BucketName: 512084481048-dlt-utilization
   IAMManagedPolicy2:
     Type: "AWS::IAM::ManagedPolicy"
     Properties:
-      ManagedPolicyName: "EC2DescribeAccountAttributes"
-      Path: "/"
+      ManagedPolicyName: EC2DescribeAccountAttributes
+      Path: /
       PolicyDocument: |
         {
             "Version": "2012-10-17",
@@ -177,314 +130,95 @@ Resources:
         }
         ]
         }
-
-  IAMManagedPolicy3:
-    Type: "AWS::IAM::ManagedPolicy"
-    Properties:
-      ManagedPolicyName: "IAM-general-SesSendGlobusOrgPolicy-8PBQNSMR8Z14"
-      Path: "/"
-      PolicyDocument: '{"Version":"2012-10-17","Statement":[{"Condition":{"ForAnyValue:StringLike":{"ses:FromAddress":"*globus.org"}},"Action":["ses:SendEmail","ses:SendRawEmail"],"Resource":["arn:aws:ses:us-east-1:512084481048:identity/*"],"Effect":"Allow","Sid":"SendEmail"}]}'
-
-  IAMManagedPolicy4:
-    Type: "AWS::IAM::ManagedPolicy"
-    Properties:
-      ManagedPolicyName: "IAM-general-Ec2InspectorPolicy-BRBGZH9VE1X"
-      Path: "/"
-      PolicyDocument: '{"Version":"2012-10-17","Statement":[{"Action":["ec2:DescribeAddresses","ec2:DescribeInstances","ec2:DescribeSecurityGroups","ec2:DescribeTags","ec2:DescribeVolumes","ec2:DescribeSnapshots"],"Resource":["*"],"Effect":"Allow","Sid":"MonitorReader"}]}'
-
-  IAMManagedPolicy5:
-    Type: "AWS::IAM::ManagedPolicy"
-    Properties:
-      ManagedPolicyName: "IAM-general-SesSendPolicy-1088T0MUQL37M"
-      Path: "/"
-      PolicyDocument: '{"Version":"2012-10-17","Statement":[{"Action":["ses:SendEmail","ses:SendRawEmail"],"Resource":["*"],"Effect":"Allow","Sid":"SendEmail"}]}'
-
-  IAMManagedPolicy6:
-    Type: "AWS::IAM::ManagedPolicy"
-    Properties:
-      ManagedPolicyName: !Sub "${IAMRole2}Policy"
-      Path: "/"
-      PolicyDocument: |
-        {
-          "Version": "2012-10-17",
-          "Statement": [
-            {
-              "Sid": "FullPolicy",
-              "Action": [
-                "acm:DescribeCertificate",
-                "acm:ListCertificates",
-                "acm:GetCertificate",
-                "autoscaling:Describe*",
-                "cloudformation:DescribeStacks",
-                "cloudformation:GetStackPolicy",
-                "cloudformation:GetTemplate",
-                "cloudformation:ListStackResources",
-                "cloudfront:List*",
-                "cloudfront:GetDistributionConfig",
-                "cloudfront:GetStreamingDistributionConfig",
-                "cloudhsm:Describe*",
-                "cloudhsm:List*",
-                "cloudsearch:Describe*",
-                "cloudtrail:DescribeTrails",
-                "cloudtrail:GetTrailStatus",
-                "cloudwatch:DescribeAlarms",
-                "cloudwatch:GetMetricStatistics",
-                "cloudwatch:ListMetrics",
-                "cognito-idp:List*",
-                "cognito-idp:Describe*",
-                "config:DescribeConfigRules",
-                "config:GetComplianceDetailsByConfigRule",
-                "config:Describe*",
-                "datapipeline:ListPipelines",
-                "datapipeline:GetPipelineDefinition",
-                "datapipeline:DescribePipelines",
-                "directconnect:DescribeLocations",
-                "directconnect:DescribeConnections",
-                "directconnect:DescribeVirtualInterfaces",
-                "dynamodb:ListTables",
-                "dynamodb:DescribeTable",
-                "dynamodb:ListTagsOfResource",
-                "ec2:Describe*",
-                "ec2:GetConsoleOutput",
-                "ecs:ListClusters",
-                "ecs:DescribeClusters",
-                "ecs:ListContainerInstances",
-                "ecs:DescribeContainerInstances",
-                "ecs:ListServices",
-                "ecs:DescribeServices",
-                "ecs:ListTaskDefinitions",
-                "ecs:DescribeTaskDefinition",
-                "ecs:ListTasks",
-                "ecs:DescribeTasks",
-                "elasticache:Describe*",
-                "elasticache:ListTagsForResource",
-                "elasticbeanstalk:Describe*",
-                "elasticfilesystem:Describe*",
-                "elasticloadbalancing:Describe*",
-                "elasticmapreduce:Describe*",
-                "elasticmapreduce:ListSteps",
-                "elasticmapreduce:ListInstanceGroups",
-                "elasticmapreduce:ListBootstrapActions",
-                "elasticmapreduce:ListClusters",
-                "elasticmapreduce:ListInstances",
-                "es:ListDomainNames",
-                "es:DescribeElasticsearchDomains",
-                "glacier:List*",
-                "glacier:DescribeVault",
-                "glacier:GetVaultNotifications",
-                "glacier:DescribeJob",
-                "glacier:GetJobOutput",
-                "iam:Get*",
-                "iam:List*",
-                "iam:GenerateCredentialReport",
-                "iot:DescribeThing",
-                "iot:ListThings",
-                "iam:GenerateCredentialReport",
-                "kinesis:ListStreams",
-                "kinesis:DescribeStream",
-                "kinesis:GetShardIterator",
-                "kinesis:GetRecords",
-                "kms:Describe*",
-                "kms:Get*",
-                "kms:List*",
-                "lambda:ListFunctions",
-                "lambda:ListTags",
-                "rds:Describe*",
-                "rds:ListTagsForResource",
-                "redshift:Describe*",
-                "redshift:ViewQueriesInConsole",
-                "route53:ListHealthChecks",
-                "route53:ListHostedZones",
-                "route53:ListResourceRecordSets",
-                "s3:GetBucketACL",
-                "s3:GetBucketLocation",
-                "s3:GetBucketLogging",
-                "s3:GetBucketPolicy",
-                "s3:GetBucketTagging",
-                "s3:GetBucketWebsite",
-                "s3:GetBucketNotification",
-                "s3:GetLifecycleConfiguration",
-                "s3:List*",
-                "ses:ListIdentities",
-                "ses:GetSendStatistics",
-                "ses:GetIdentityDkimAttributes",
-                "ses:GetIdentityVerificationAttributes",
-                "ses:GetSendQuota",
-                "sdb:ListDomains",
-                "sdb:DomainMetadata",
-                "support:Describe*",
-                "swf:ListClosedWorkflowExecutions",
-                "swf:ListDomains",
-                "swf:ListActivityTypes",
-                "swf:ListWorkflowTypes",
-                "sns:GetTopicAttributes",
-                "sns:GetSubscriptionAttributes",
-                "sns:ListTopics",
-                "sns:ListSubscriptionsByTopic",
-                "ssm:List*",
-                "sqs:ListQueues",
-                "sqs:GetQueueAttributes",
-                "storagegateway:Describe*",
-                "storagegateway:List*",
-                "workspaces:DescribeWorkspaceDirectories",
-                "workspaces:DescribeWorkspaceBundles",
-                "workspaces:DescribeWorkspaces",
-                "Organizations:List*",
-                "Organizations:Describe*"
-              ],
-              "Effect": "Allow",
-              "Resource": "*"
-            },
-            {
-              "Sid": "CloudWatchLogsSpecific",
-              "Effect": "Allow",
-              "Action": [
-                "logs:GetLogEvents",
-                "logs:DescribeLogGroups",
-                "logs:DescribeLogStreams"
-              ],
-              "Resource": [
-                "arn:aws:logs:*:*:*"
-              ]
-            }
-          ]
-        }
-
-  IAMManagedPolicy7:
-    Type: "AWS::IAM::ManagedPolicy"
-    Properties:
-      ManagedPolicyName: "IAM-general-SesSendGlobuscsInfoPolicy-10C90KHC8XCNA"
-      Path: "/"
-      PolicyDocument: '{"Version":"2012-10-17","Statement":[{"Condition":{"ForAnyValue:StringLike":{"ses:FromAddress":"*globuscs.info"}},"Action":["ses:SendEmail","ses:SendRawEmail"],"Resource":["arn:aws:ses:us-east-1:512084481048:identity/*"],"Effect":"Allow","Sid":"SendEmail"}]}'
-
-  IAMManagedPolicy8:
-    Type: "AWS::IAM::ManagedPolicy"
-    Properties:
-      ManagedPolicyName: "IAM-general-CloudwatchMetricGlobalPut-1I3GWOB8RVRIQ"
-      Path: "/"
-      PolicyDocument: '{"Version":"2012-10-17","Statement":[{"Action":["cloudwatch:PutMetricData"],"Resource":["*"],"Effect":"Allow","Sid":"MetricPut"}]}'
-
-  IAMManagedPolicy9:
-    Type: "AWS::IAM::ManagedPolicy"
-    Properties:
-      ManagedPolicyName: "IAM-general-MonitorReaderPolicy-1LY644RL9JEB1"
-      Path: "/"
-      PolicyDocument: '{"Version":"2012-10-17","Statement":[{"Action":["ec2:DescribeAddresses","ec2:DescribeInstances","ec2:DescribeSecurityGroups","ec2:DescribeTags","ec2:DescribeVolumes","ec2:DescribeSnapshots","ec2:DescribeReservedInstances","ec2:DescribeReservedInstancesOfferings","rds:DescribeDBInstances","rds:DescribeDBSecurityGroups","redshift:DescribeClusters","redshift:DescribeClusterSnapshots","s3:List*"],"Resource":["*"],"Effect":"Allow","Sid":"MonitorReader"}]}'
-
   S3Bucket2:
     Type: "AWS::S3::Bucket"
     Properties:
-      BucketName: "config-bucket-512084481048"
+      BucketName: config-bucket-512084481048
       BucketEncryption:
         ServerSideEncryptionConfiguration:
           - ServerSideEncryptionByDefault:
-              SSEAlgorithm: "AES256"
+              SSEAlgorithm: AES256
             BucketKeyEnabled: false
-
   ElastiCacheSubnetGroup:
     Type: "AWS::ElastiCache::SubnetGroup"
     Properties:
       Description: ""
       CacheSubnetGroupName: !Sub "${RDSDBInstance}-redis"
       SubnetIds:
-        - !Ref EC2Subnet3
         - !Ref EC2Subnet2
-
-  ConfigConfigurationRecorder:
-    Type: "AWS::Config::ConfigurationRecorder"
-    Properties:
-      Name: "default"
-      RecordingGroup:
-        AllSupported: true
-        IncludeGlobalResourceTypes: true
-      RoleARN: "arn:aws:iam::512084481048:role/aws-service-role/config.amazonaws.com/AWSServiceRoleForConfig"
-
-  DocDBDBSubnetGroup:
-    Type: "AWS::DocDB::DBSubnetGroup"
-    Properties:
-      DBSubnetGroupName: !Sub "default-${EC2VPC}"
-      DBSubnetGroupDescription: "Created from the RDS Management Console"
-      SubnetIds:
-        - !Ref EC2Subnet3
-        - !Ref EC2Subnet2
-        - !Ref EC2Subnet
-        - !Ref EC2Subnet4
-
   S3BucketPolicy:
     Type: "AWS::S3::BucketPolicy"
     Properties:
       Bucket: !Ref S3Bucket2
       PolicyDocument:
-        Version: "2012-10-17"
+        Version: 2012-10-17
         Statement:
-          - Sid: "AWSConfigBucketPermissionsCheck"
-            Effect: "Allow"
+          - Sid: AWSConfigBucketPermissionsCheck
+            Effect: Allow
             Principal:
-              Service: "config.amazonaws.com"
+              Service: config.amazonaws.com
             Action: "s3:GetBucketAcl"
             Resource: !Sub "arn:aws:s3:::${S3Bucket2}"
-          - Sid: "AWSConfigBucketDelivery"
-            Effect: "Allow"
+          - Sid: AWSConfigBucketDelivery
+            Effect: Allow
             Principal:
-              Service: "config.amazonaws.com"
+              Service: config.amazonaws.com
             Action: "s3:PutObject"
             Resource: !Sub "arn:aws:s3:::${S3Bucket2}/AWSLogs/512084481048/Config/*"
             Condition:
               StringEquals:
-                "s3:x-amz-acl": "bucket-owner-full-control"
-
+                "s3:x-amz-acl": bucket-owner-full-control
   EC2VPC:
     Type: "AWS::EC2::VPC"
     Properties:
-      CidrBlock: "172.28.0.0/16"
+      CidrBlock: 172.28.0.0/16
       EnableDnsSupport: true
       EnableDnsHostnames: true
-      InstanceTenancy: "default"
+      InstanceTenancy: default
       Tags:
         - Key: "aws:cloudformation:logical-id"
-          Value: "MainVpc"
-        - Key: "template_source"
-          Value: "UNSPECIFIED"
-        - Key: "Name"
-          Value: "funcx-general-vpc-cfn"
+          Value: MainVpc
+        - Key: template_source
+          Value: UNSPECIFIED
+        - Key: Name
+          Value: funcx-general-vpc-cfn
         - Key: "aws:cloudformation:stack-name"
-          Value: "vpc-funcx"
+          Value: vpc-funcx
         - Key: "aws:cloudformation:stack-id"
-          Value: "arn:aws:cloudformation:us-east-1:512084481048:stack/vpc-funcx/22b92c60-5087-11eb-a957-0e9b76727ea5"
-
+          Value: >-
+            arn:aws:cloudformation:us-east-1:512084481048:stack/vpc-funcx/22b92c60-5087-11eb-a957-0e9b76727ea5
   EKSNodegroup:
     Type: "AWS::EKS::Nodegroup"
     Properties:
       NodegroupName: !Sub "${RDSDBInstance}-eks-node-group"
       ClusterName: !Ref RDSDBInstance
       Version: "1.18"
-      ReleaseVersion: "1.18.9-20201211"
+      ReleaseVersion: 1.18.9-20201211
       ScalingConfig:
         MinSize: 1
         MaxSize: 2
         DesiredSize: 1
       InstanceTypes:
-        - "t3.medium"
+        - t3.medium
       Subnets:
         - !Ref EC2Subnet4
         - !Ref EC2Subnet
       RemoteAccess:
-        Ec2SshKey: "funcx-eks"
-      AmiType: "AL2_x86_64"
+        Ec2SshKey: funcx-eks
+      AmiType: AL2_x86_64
       NodeRole: !GetAtt IAMRole6.Arn
       Labels: {}
       DiskSize: 20
       Tags: {}
-      CapacityType: "ON_DEMAND"
-
+      CapacityType: ON_DEMAND
   EC2Instance3:
     Type: "AWS::EC2::Instance"
     Properties:
-      ImageId: "ami-0e609024e4dbce4a5"
-      InstanceType: "t2.micro"
-      KeyName: "funcx-eks"
+      ImageId: ami-0e609024e4dbce4a5
+      InstanceType: t2.micro
+      KeyName: funcx-eks
       AvailabilityZone: !GetAtt EC2Instance4.AvailabilityZone
-      Tenancy: "default"
+      Tenancy: default
       SubnetId: !Ref EC2Subnet4
       EbsOptimized: false
       SecurityGroupIds:
@@ -494,39 +228,39 @@ Resources:
         - !Ref EC2SecurityGroup6
       SourceDestCheck: true
       BlockDeviceMappings:
-        - DeviceName: "/dev/xvda"
+        - DeviceName: /dev/xvda
           Ebs:
             Encrypted: false
             VolumeSize: 20
-            SnapshotId: "snap-0bbb3dc5b05099151"
-            VolumeType: "gp2"
+            SnapshotId: snap-0bbb3dc5b05099151
+            VolumeType: gp2
             DeleteOnTermination: true
-      UserData: "TUlNRS1WZXJzaW9uOiAxLjAKQ29udGVudC1UeXBlOiBtdWx0aXBhcnQvbWl4ZWQ7IGJvdW5kYXJ5PSIvLyIKCi0tLy8KQ29udGVudC1UeXBlOiB0ZXh0L3gtc2hlbGxzY3JpcHQ7IGNoYXJzZXQ9InVzLWFzY2lpIgojIS9iaW4vYmFzaApzZXQgLWV4CkI2NF9DTFVTVEVSX0NBPUxTMHRMUzFDUlVkSlRpQkRSVkpVU1VaSlEwRlVSUzB0TFMwdENrMUpTVU41UkVORFFXSkRaMEYzU1VKQlowbENRVVJCVGtKbmEzRm9hMmxIT1hjd1FrRlJjMFpCUkVGV1RWSk5kMFZSV1VSV1VWRkVSWGR3Y21SWFNtd0tZMjAxYkdSSFZucE5RalJZUkZSSmVFMUVSWGhOVkVsM1RYcEJkMDVHYjFoRVZFMTRUVVJGZDA5VVNYZE5la0YzVGtadmQwWlVSVlJOUWtWSFFURlZSUXBCZUUxTFlUTldhVnBZU25WYVdGSnNZM3BEUTBGVFNYZEVVVmxLUzI5YVNXaDJZMDVCVVVWQ1FsRkJSR2RuUlZCQlJFTkRRVkZ2UTJkblJVSkJUR3RFQ2pCV2IzcHdRMVJyZWxZM2NWcHFUVWxyWm5kaVYwaDVjbG8xUnpOQ1IySk9jbXB0YlVjemJtVnVXR2hyY1U1SGVuQldaa1FyUmpSS1NsQXJNM2Q1T0RJS1MzTldhMjB6ZFhZMVNYcHZiRWxPVVVOcFNEbElXRkptVTI5dFJIQkxReTlhYjNkcmNqUk5OVTFQUVVGWWJVbFNaSGgzYkM4MlZteGlNelZyWldrdlRncGxPVUZ2YXk4dmFIQktWMjh6UVhCQ1ZGaDFMeXRSTVdGRVVsUm1RV3d4WWpoclRqVnBjbGh4TTNsNlZtdGhLMFZXWm1zclRESlRTVWhDTWpZNWVUUkxDblIxTVVOQlowdDRURkJxVTNGYVlVNVNVakZKV2pST1dtbDJOSG92WTAxc1luZFphVnAxUm01aGMyaGtWVXRDVkZKb2RWZGpLM2t3YkdaVFRDczVRV1FLWkRBMWEweG1iU3RrZUdoNFZGSkNNM0p6VTFweFRuWTJZbU5MYTNsTlFXdEdTbUZVTkVweVRXZEtNMlZXYUdKSU5Fc3ZlbUZSWmxCTFkxcEJibTluZHdwaGJEUjRlbmRGZWpOVVdsTXZRVmhRVUVoelEwRjNSVUZCWVUxcVRVTkZkMFJuV1VSV1VqQlFRVkZJTDBKQlVVUkJaMHRyVFVFNFIwRXhWV1JGZDBWQ0NpOTNVVVpOUVUxQ1FXWTRkMFJSV1VwTGIxcEphSFpqVGtGUlJVeENVVUZFWjJkRlFrRkdUbmxxVDBKcFFYbHpiSEo2VW5WS1NtVm1kV04yY2tKc2FERUtRVUZoT1ZST09GQkxiVTlqYjJoeGIwdFZSazl3VTFwbVNscEdaRlpKZDFwcllXMDJVMnBVS3l0M1JIUmpObE5PUTAxSVQwUlpaa2hNY0dGV1MzTXZad3AxU0UxcGIyZG1VaTlOZEVKR09VVmplRXhoWm1GS1ZHODFhbk5YUXpWcFYxb3lSVlI0VG5GcE5tVTVhMXB1UldWQ00yZEtiVmx1YkVkaFpHUk5VRXBzQ2tWWlJXVnVWamRSU1hBNU9VbHRiREZoYzFSNGNtaHBWbEIxU21kdGVYVXhTV0ZUYVhVdlJ5dFdUMnBUWTFsa2RHSkxTbEoxV0U0NWRUUkpRWGxYYmxNS2IyOTNlU3RaWTBkRU4zVklVbFJ6YkV4WU4wVm1XVEJsYVZvMlIyNUZhV3N6Uld4SU5uVk1kMWs1VDFoalNIcGtablIwUjJoSGIyVjNZblV2Y2pKelRBcElVVkJvYm5KbmNVcEtlU3QzTWxaNFRtcDBlRGhsTVcxamIyeHhOSEZyUTNvM2NFTjNVSFZvYXpNMlIyUnBRMWhGT0VZeFRuQkNUVkZRT0QwS0xTMHRMUzFGVGtRZ1EwVlNWRWxHU1VOQlZFVXRMUzB0TFFvPQpBUElfU0VSVkVSX1VSTD1odHRwczovL0Q1NDU5NDc4RUEzMjQ0MUI4REEwNDMxM0EyMDEyOUI3LmdyNy51cy1lYXN0LTEuZWtzLmFtYXpvbmF3cy5jb20KSzhTX0NMVVNURVJfRE5TX0lQPTEwLjEwMC4wLjEwCi9ldGMvZWtzL2Jvb3RzdHJhcC5zaCBmdW5jeC1kZXYgLS1rdWJlbGV0LWV4dHJhLWFyZ3MgJy0tbm9kZS1sYWJlbHM9ZWtzLmFtYXpvbmF3cy5jb20vbm9kZWdyb3VwLWltYWdlPWFtaS0wZTYwOTAyNGU0ZGJjZTRhNSxla3MuYW1hem9uYXdzLmNvbS9jYXBhY2l0eVR5cGU9T05fREVNQU5ELGVrcy5hbWF6b25hd3MuY29tL25vZGVncm91cD1mdW5jeC1kZXYtZWtzLW5vZGUtZ3JvdXAnIC0tYjY0LWNsdXN0ZXItY2EgJEI2NF9DTFVTVEVSX0NBIC0tYXBpc2VydmVyLWVuZHBvaW50ICRBUElfU0VSVkVSX1VSTCAtLWRucy1jbHVzdGVyLWlwICRLOFNfQ0xVU1RFUl9ETlNfSVAKCi0tLy8tLQ=="
+      UserData: >-
+        TUlNRS1WZXJzaW9uOiAxLjAKQ29udGVudC1UeXBlOiBtdWx0aXBhcnQvbWl4ZWQ7IGJvdW5kYXJ5PSIvLyIKCi0tLy8KQ29udGVudC1UeXBlOiB0ZXh0L3gtc2hlbGxzY3JpcHQ7IGNoYXJzZXQ9InVzLWFzY2lpIgojIS9iaW4vYmFzaApzZXQgLWV4CkI2NF9DTFVTVEVSX0NBPUxTMHRMUzFDUlVkSlRpQkRSVkpVU1VaSlEwRlVSUzB0TFMwdENrMUpTVU41UkVORFFXSkRaMEYzU1VKQlowbENRVVJCVGtKbmEzRm9hMmxIT1hjd1FrRlJjMFpCUkVGV1RWSk5kMFZSV1VSV1VWRkVSWGR3Y21SWFNtd0tZMjAxYkdSSFZucE5RalJZUkZSSmVFMUVSWGhOVkVsM1RYcEJkMDVHYjFoRVZFMTRUVVJGZDA5VVNYZE5la0YzVGtadmQwWlVSVlJOUWtWSFFURlZSUXBCZUUxTFlUTldhVnBZU25WYVdGSnNZM3BEUTBGVFNYZEVVVmxLUzI5YVNXaDJZMDVCVVVWQ1FsRkJSR2RuUlZCQlJFTkRRVkZ2UTJkblJVSkJUR3RFQ2pCV2IzcHdRMVJyZWxZM2NWcHFUVWxyWm5kaVYwaDVjbG8xUnpOQ1IySk9jbXB0YlVjemJtVnVXR2hyY1U1SGVuQldaa1FyUmpSS1NsQXJNM2Q1T0RJS1MzTldhMjB6ZFhZMVNYcHZiRWxPVVVOcFNEbElXRkptVTI5dFJIQkxReTlhYjNkcmNqUk5OVTFQUVVGWWJVbFNaSGgzYkM4MlZteGlNelZyWldrdlRncGxPVUZ2YXk4dmFIQktWMjh6UVhCQ1ZGaDFMeXRSTVdGRVVsUm1RV3d4WWpoclRqVnBjbGh4TTNsNlZtdGhLMFZXWm1zclRESlRTVWhDTWpZNWVUUkxDblIxTVVOQlowdDRURkJxVTNGYVlVNVNVakZKV2pST1dtbDJOSG92WTAxc1luZFphVnAxUm01aGMyaGtWVXRDVkZKb2RWZGpLM2t3YkdaVFRDczVRV1FLWkRBMWEweG1iU3RrZUdoNFZGSkNNM0p6VTFweFRuWTJZbU5MYTNsTlFXdEdTbUZVTkVweVRXZEtNMlZXYUdKSU5Fc3ZlbUZSWmxCTFkxcEJibTluZHdwaGJEUjRlbmRGZWpOVVdsTXZRVmhRVUVoelEwRjNSVUZCWVUxcVRVTkZkMFJuV1VSV1VqQlFRVkZJTDBKQlVVUkJaMHRyVFVFNFIwRXhWV1JGZDBWQ0NpOTNVVVpOUVUxQ1FXWTRkMFJSV1VwTGIxcEphSFpqVGtGUlJVeENVVUZFWjJkRlFrRkdUbmxxVDBKcFFYbHpiSEo2VW5WS1NtVm1kV04yY2tKc2FERUtRVUZoT1ZST09GQkxiVTlqYjJoeGIwdFZSazl3VTFwbVNscEdaRlpKZDFwcllXMDJVMnBVS3l0M1JIUmpObE5PUTAxSVQwUlpaa2hNY0dGV1MzTXZad3AxU0UxcGIyZG1VaTlOZEVKR09VVmplRXhoWm1GS1ZHODFhbk5YUXpWcFYxb3lSVlI0VG5GcE5tVTVhMXB1UldWQ00yZEtiVmx1YkVkaFpHUk5VRXBzQ2tWWlJXVnVWamRSU1hBNU9VbHRiREZoYzFSNGNtaHBWbEIxU21kdGVYVXhTV0ZUYVhVdlJ5dFdUMnBUWTFsa2RHSkxTbEoxV0U0NWRUUkpRWGxYYmxNS2IyOTNlU3RaWTBkRU4zVklVbFJ6YkV4WU4wVm1XVEJsYVZvMlIyNUZhV3N6Uld4SU5uVk1kMWs1VDFoalNIcGtablIwUjJoSGIyVjNZblV2Y2pKelRBcElVVkJvYm5KbmNVcEtlU3QzTWxaNFRtcDBlRGhsTVcxamIyeHhOSEZyUTNvM2NFTjNVSFZvYXpNMlIyUnBRMWhGT0VZeFRuQkNUVkZRT0QwS0xTMHRMUzFGVGtRZ1EwVlNWRWxHU1VOQlZFVXRMUzB0TFFvPQpBUElfU0VSVkVSX1VSTD1odHRwczovL0Q1NDU5NDc4RUEzMjQ0MUI4REEwNDMxM0EyMDEyOUI3LmdyNy51cy1lYXN0LTEuZWtzLmFtYXpvbmF3cy5jb20KSzhTX0NMVVNURVJfRE5TX0lQPTEwLjEwMC4wLjEwCi9ldGMvZWtzL2Jvb3RzdHJhcC5zaCBmdW5jeC1kZXYgLS1rdWJlbGV0LWV4dHJhLWFyZ3MgJy0tbm9kZS1sYWJlbHM9ZWtzLmFtYXpvbmF3cy5jb20vbm9kZWdyb3VwLWltYWdlPWFtaS0wZTYwOTAyNGU0ZGJjZTRhNSxla3MuYW1hem9uYXdzLmNvbS9jYXBhY2l0eVR5cGU9T05fREVNQU5ELGVrcy5hbWF6b25hd3MuY29tL25vZGVncm91cD1mdW5jeC1kZXYtZWtzLW5vZGUtZ3JvdXAnIC0tYjY0LWNsdXN0ZXItY2EgJEI2NF9DTFVTVEVSX0NBIC0tYXBpc2VydmVyLWVuZHBvaW50ICRBUElfU0VSVkVSX1VSTCAtLWRucy1jbHVzdGVyLWlwICRLOFNfQ0xVU1RFUl9ETlNfSVAKCi0tLy8tLQ==
       IamInstanceProfile: !Ref AutoScalingAutoScalingGroup
       Tags:
-        - Key: "k8s.io/cluster-autoscaler/funcx-dev"
-          Value: "owned"
-        - Key: "kubernetes.io/cluster/funcx-dev"
-          Value: "owned"
+        - Key: k8s.io/cluster-autoscaler/funcx-dev
+          Value: owned
+        - Key: kubernetes.io/cluster/funcx-dev
+          Value: owned
         - Key: "eks:nodegroup-name"
-          Value: "funcx-dev-eks-node-group"
+          Value: funcx-dev-eks-node-group
         - Key: "eks:cluster-name"
-          Value: "funcx-dev"
-        - Key: "k8s.io/cluster-autoscaler/enabled"
+          Value: funcx-dev
+        - Key: k8s.io/cluster-autoscaler/enabled
           Value: "true"
       HibernationOptions:
         Configured: false
       EnclaveOptions:
         Enabled: false
-
   EC2Instance4:
     Type: "AWS::EC2::Instance"
     Properties:
-      ImageId: "ami-0e609024e4dbce4a5"
-      InstanceType: "t3.medium"
-      KeyName: "funcx-eks"
+      ImageId: ami-0e609024e4dbce4a5
+      InstanceType: t3.medium
+      KeyName: funcx-eks
       AvailabilityZone: !GetAtt EC2Instance5.AvailabilityZone
-      Tenancy: "default"
+      Tenancy: default
       SubnetId: !Ref EC2Subnet4
       EbsOptimized: false
       SecurityGroupIds:
@@ -538,33 +272,34 @@ Resources:
         - !Ref EC2SecurityGroup6
       SourceDestCheck: true
       BlockDeviceMappings:
-        - DeviceName: "/dev/xvda"
+        - DeviceName: /dev/xvda
           Ebs:
             Encrypted: false
             VolumeSize: 20
-            SnapshotId: "snap-0bbb3dc5b05099151"
-            VolumeType: "gp2"
+            SnapshotId: snap-0bbb3dc5b05099151
+            VolumeType: gp2
             DeleteOnTermination: true
-      UserData: "TUlNRS1WZXJzaW9uOiAxLjAKQ29udGVudC1UeXBlOiBtdWx0aXBhcnQvbWl4ZWQ7IGJvdW5kYXJ5PSIvLyIKCi0tLy8KQ29udGVudC1UeXBlOiB0ZXh0L3gtc2hlbGxzY3JpcHQ7IGNoYXJzZXQ9InVzLWFzY2lpIgojIS9iaW4vYmFzaApzZXQgLWV4CkI2NF9DTFVTVEVSX0NBPUxTMHRMUzFDUlVkSlRpQkRSVkpVU1VaSlEwRlVSUzB0TFMwdENrMUpTVU41UkVORFFXSkRaMEYzU1VKQlowbENRVVJCVGtKbmEzRm9hMmxIT1hjd1FrRlJjMFpCUkVGV1RWSk5kMFZSV1VSV1VWRkVSWGR3Y21SWFNtd0tZMjAxYkdSSFZucE5RalJZUkZSSmVFMUVSWGhOVkVsM1RYcEJkMDVHYjFoRVZFMTRUVVJGZDA5VVNYZE5la0YzVGtadmQwWlVSVlJOUWtWSFFURlZSUXBCZUUxTFlUTldhVnBZU25WYVdGSnNZM3BEUTBGVFNYZEVVVmxLUzI5YVNXaDJZMDVCVVVWQ1FsRkJSR2RuUlZCQlJFTkRRVkZ2UTJkblJVSkJUR3RFQ2pCV2IzcHdRMVJyZWxZM2NWcHFUVWxyWm5kaVYwaDVjbG8xUnpOQ1IySk9jbXB0YlVjemJtVnVXR2hyY1U1SGVuQldaa1FyUmpSS1NsQXJNM2Q1T0RJS1MzTldhMjB6ZFhZMVNYcHZiRWxPVVVOcFNEbElXRkptVTI5dFJIQkxReTlhYjNkcmNqUk5OVTFQUVVGWWJVbFNaSGgzYkM4MlZteGlNelZyWldrdlRncGxPVUZ2YXk4dmFIQktWMjh6UVhCQ1ZGaDFMeXRSTVdGRVVsUm1RV3d4WWpoclRqVnBjbGh4TTNsNlZtdGhLMFZXWm1zclRESlRTVWhDTWpZNWVUUkxDblIxTVVOQlowdDRURkJxVTNGYVlVNVNVakZKV2pST1dtbDJOSG92WTAxc1luZFphVnAxUm01aGMyaGtWVXRDVkZKb2RWZGpLM2t3YkdaVFRDczVRV1FLWkRBMWEweG1iU3RrZUdoNFZGSkNNM0p6VTFweFRuWTJZbU5MYTNsTlFXdEdTbUZVTkVweVRXZEtNMlZXYUdKSU5Fc3ZlbUZSWmxCTFkxcEJibTluZHdwaGJEUjRlbmRGZWpOVVdsTXZRVmhRVUVoelEwRjNSVUZCWVUxcVRVTkZkMFJuV1VSV1VqQlFRVkZJTDBKQlVVUkJaMHRyVFVFNFIwRXhWV1JGZDBWQ0NpOTNVVVpOUVUxQ1FXWTRkMFJSV1VwTGIxcEphSFpqVGtGUlJVeENVVUZFWjJkRlFrRkdUbmxxVDBKcFFYbHpiSEo2VW5WS1NtVm1kV04yY2tKc2FERUtRVUZoT1ZST09GQkxiVTlqYjJoeGIwdFZSazl3VTFwbVNscEdaRlpKZDFwcllXMDJVMnBVS3l0M1JIUmpObE5PUTAxSVQwUlpaa2hNY0dGV1MzTXZad3AxU0UxcGIyZG1VaTlOZEVKR09VVmplRXhoWm1GS1ZHODFhbk5YUXpWcFYxb3lSVlI0VG5GcE5tVTVhMXB1UldWQ00yZEtiVmx1YkVkaFpHUk5VRXBzQ2tWWlJXVnVWamRSU1hBNU9VbHRiREZoYzFSNGNtaHBWbEIxU21kdGVYVXhTV0ZUYVhVdlJ5dFdUMnBUWTFsa2RHSkxTbEoxV0U0NWRUUkpRWGxYYmxNS2IyOTNlU3RaWTBkRU4zVklVbFJ6YkV4WU4wVm1XVEJsYVZvMlIyNUZhV3N6Uld4SU5uVk1kMWs1VDFoalNIcGtablIwUjJoSGIyVjNZblV2Y2pKelRBcElVVkJvYm5KbmNVcEtlU3QzTWxaNFRtcDBlRGhsTVcxamIyeHhOSEZyUTNvM2NFTjNVSFZvYXpNMlIyUnBRMWhGT0VZeFRuQkNUVkZRT0QwS0xTMHRMUzFGVGtRZ1EwVlNWRWxHU1VOQlZFVXRMUzB0TFFvPQpBUElfU0VSVkVSX1VSTD1odHRwczovL0Q1NDU5NDc4RUEzMjQ0MUI4REEwNDMxM0EyMDEyOUI3LmdyNy51cy1lYXN0LTEuZWtzLmFtYXpvbmF3cy5jb20KSzhTX0NMVVNURVJfRE5TX0lQPTEwLjEwMC4wLjEwCi9ldGMvZWtzL2Jvb3RzdHJhcC5zaCBmdW5jeC1kZXYgLS1rdWJlbGV0LWV4dHJhLWFyZ3MgJy0tbm9kZS1sYWJlbHM9ZWtzLmFtYXpvbmF3cy5jb20vbm9kZWdyb3VwLWltYWdlPWFtaS0wZTYwOTAyNGU0ZGJjZTRhNSxla3MuYW1hem9uYXdzLmNvbS9jYXBhY2l0eVR5cGU9T05fREVNQU5ELGVrcy5hbWF6b25hd3MuY29tL25vZGVncm91cD1mdW5jeC1kZXYtZWtzLW5vZGUtZ3JvdXAnIC0tYjY0LWNsdXN0ZXItY2EgJEI2NF9DTFVTVEVSX0NBIC0tYXBpc2VydmVyLWVuZHBvaW50ICRBUElfU0VSVkVSX1VSTCAtLWRucy1jbHVzdGVyLWlwICRLOFNfQ0xVU1RFUl9ETlNfSVAKCi0tLy8tLQ=="
+      UserData: >-
+        TUlNRS1WZXJzaW9uOiAxLjAKQ29udGVudC1UeXBlOiBtdWx0aXBhcnQvbWl4ZWQ7IGJvdW5kYXJ5PSIvLyIKCi0tLy8KQ29udGVudC1UeXBlOiB0ZXh0L3gtc2hlbGxzY3JpcHQ7IGNoYXJzZXQ9InVzLWFzY2lpIgojIS9iaW4vYmFzaApzZXQgLWV4CkI2NF9DTFVTVEVSX0NBPUxTMHRMUzFDUlVkSlRpQkRSVkpVU1VaSlEwRlVSUzB0TFMwdENrMUpTVU41UkVORFFXSkRaMEYzU1VKQlowbENRVVJCVGtKbmEzRm9hMmxIT1hjd1FrRlJjMFpCUkVGV1RWSk5kMFZSV1VSV1VWRkVSWGR3Y21SWFNtd0tZMjAxYkdSSFZucE5RalJZUkZSSmVFMUVSWGhOVkVsM1RYcEJkMDVHYjFoRVZFMTRUVVJGZDA5VVNYZE5la0YzVGtadmQwWlVSVlJOUWtWSFFURlZSUXBCZUUxTFlUTldhVnBZU25WYVdGSnNZM3BEUTBGVFNYZEVVVmxLUzI5YVNXaDJZMDVCVVVWQ1FsRkJSR2RuUlZCQlJFTkRRVkZ2UTJkblJVSkJUR3RFQ2pCV2IzcHdRMVJyZWxZM2NWcHFUVWxyWm5kaVYwaDVjbG8xUnpOQ1IySk9jbXB0YlVjemJtVnVXR2hyY1U1SGVuQldaa1FyUmpSS1NsQXJNM2Q1T0RJS1MzTldhMjB6ZFhZMVNYcHZiRWxPVVVOcFNEbElXRkptVTI5dFJIQkxReTlhYjNkcmNqUk5OVTFQUVVGWWJVbFNaSGgzYkM4MlZteGlNelZyWldrdlRncGxPVUZ2YXk4dmFIQktWMjh6UVhCQ1ZGaDFMeXRSTVdGRVVsUm1RV3d4WWpoclRqVnBjbGh4TTNsNlZtdGhLMFZXWm1zclRESlRTVWhDTWpZNWVUUkxDblIxTVVOQlowdDRURkJxVTNGYVlVNVNVakZKV2pST1dtbDJOSG92WTAxc1luZFphVnAxUm01aGMyaGtWVXRDVkZKb2RWZGpLM2t3YkdaVFRDczVRV1FLWkRBMWEweG1iU3RrZUdoNFZGSkNNM0p6VTFweFRuWTJZbU5MYTNsTlFXdEdTbUZVTkVweVRXZEtNMlZXYUdKSU5Fc3ZlbUZSWmxCTFkxcEJibTluZHdwaGJEUjRlbmRGZWpOVVdsTXZRVmhRVUVoelEwRjNSVUZCWVUxcVRVTkZkMFJuV1VSV1VqQlFRVkZJTDBKQlVVUkJaMHRyVFVFNFIwRXhWV1JGZDBWQ0NpOTNVVVpOUVUxQ1FXWTRkMFJSV1VwTGIxcEphSFpqVGtGUlJVeENVVUZFWjJkRlFrRkdUbmxxVDBKcFFYbHpiSEo2VW5WS1NtVm1kV04yY2tKc2FERUtRVUZoT1ZST09GQkxiVTlqYjJoeGIwdFZSazl3VTFwbVNscEdaRlpKZDFwcllXMDJVMnBVS3l0M1JIUmpObE5PUTAxSVQwUlpaa2hNY0dGV1MzTXZad3AxU0UxcGIyZG1VaTlOZEVKR09VVmplRXhoWm1GS1ZHODFhbk5YUXpWcFYxb3lSVlI0VG5GcE5tVTVhMXB1UldWQ00yZEtiVmx1YkVkaFpHUk5VRXBzQ2tWWlJXVnVWamRSU1hBNU9VbHRiREZoYzFSNGNtaHBWbEIxU21kdGVYVXhTV0ZUYVhVdlJ5dFdUMnBUWTFsa2RHSkxTbEoxV0U0NWRUUkpRWGxYYmxNS2IyOTNlU3RaWTBkRU4zVklVbFJ6YkV4WU4wVm1XVEJsYVZvMlIyNUZhV3N6Uld4SU5uVk1kMWs1VDFoalNIcGtablIwUjJoSGIyVjNZblV2Y2pKelRBcElVVkJvYm5KbmNVcEtlU3QzTWxaNFRtcDBlRGhsTVcxamIyeHhOSEZyUTNvM2NFTjNVSFZvYXpNMlIyUnBRMWhGT0VZeFRuQkNUVkZRT0QwS0xTMHRMUzFGVGtRZ1EwVlNWRWxHU1VOQlZFVXRMUzB0TFFvPQpBUElfU0VSVkVSX1VSTD1odHRwczovL0Q1NDU5NDc4RUEzMjQ0MUI4REEwNDMxM0EyMDEyOUI3LmdyNy51cy1lYXN0LTEuZWtzLmFtYXpvbmF3cy5jb20KSzhTX0NMVVNURVJfRE5TX0lQPTEwLjEwMC4wLjEwCi9ldGMvZWtzL2Jvb3RzdHJhcC5zaCBmdW5jeC1kZXYgLS1rdWJlbGV0LWV4dHJhLWFyZ3MgJy0tbm9kZS1sYWJlbHM9ZWtzLmFtYXpvbmF3cy5jb20vbm9kZWdyb3VwLWltYWdlPWFtaS0wZTYwOTAyNGU0ZGJjZTRhNSxla3MuYW1hem9uYXdzLmNvbS9jYXBhY2l0eVR5cGU9T05fREVNQU5ELGVrcy5hbWF6b25hd3MuY29tL25vZGVncm91cD1mdW5jeC1kZXYtZWtzLW5vZGUtZ3JvdXAnIC0tYjY0LWNsdXN0ZXItY2EgJEI2NF9DTFVTVEVSX0NBIC0tYXBpc2VydmVyLWVuZHBvaW50ICRBUElfU0VSVkVSX1VSTCAtLWRucy1jbHVzdGVyLWlwICRLOFNfQ0xVU1RFUl9ETlNfSVAKCi0tLy8tLQ==
       IamInstanceProfile: !Ref AutoScalingAutoScalingGroup
       Tags:
-        - Key: "k8s.io/cluster-autoscaler/funcx-dev"
-          Value: "owned"
+        - Key: k8s.io/cluster-autoscaler/funcx-dev
+          Value: owned
         - Key: "eks:cluster-name"
-          Value: "funcx-dev"
+          Value: funcx-dev
         - Key: "aws:ec2launchtemplate:id"
           Value: !Ref EC2LaunchTemplate
         - Key: "eks:nodegroup-name"
-          Value: "funcx-dev-eks-node-group"
-        - Key: "kubernetes.io/cluster/funcx-dev"
-          Value: "owned"
+          Value: funcx-dev-eks-node-group
+        - Key: kubernetes.io/cluster/funcx-dev
+          Value: owned
         - Key: "aws:autoscaling:groupName"
           Value: !Ref AutoScalingAutoScalingGroup
         - Key: "aws:ec2launchtemplate:version"
           Value: "1"
         - Key: "aws:ec2:fleet-id"
-          Value: "fleet-98f6e7d5-01d7-a7f9-2c18-29008734d08d"
-        - Key: "k8s.io/cluster-autoscaler/enabled"
+          Value: fleet-98f6e7d5-01d7-a7f9-2c18-29008734d08d
+        - Key: k8s.io/cluster-autoscaler/enabled
           Value: "true"
       HibernationOptions:
         Configured: false
@@ -573,402 +308,233 @@ Resources:
         ThreadsPerCore: 2
       EnclaveOptions:
         Enabled: false
-
   EC2Instance5:
     Type: "AWS::EC2::Instance"
     Properties:
-      ImageId: "ami-042e8287309f5df03"
-      InstanceType: "t2.micro"
-      KeyName: "jbyran"
+      ImageId: ami-042e8287309f5df03
+      InstanceType: t2.micro
+      KeyName: jbyran
       AvailabilityZone: !GetAtt EC2Subnet3.AvailabilityZone
-      Tenancy: "default"
+      Tenancy: default
       SubnetId: !Ref EC2Subnet4
       EbsOptimized: false
       SecurityGroupIds:
         - !Ref EC2SecurityGroup3
       SourceDestCheck: true
       BlockDeviceMappings:
-        - DeviceName: "/dev/sda1"
+        - DeviceName: /dev/sda1
           Ebs:
             Encrypted: false
             VolumeSize: 8
-            SnapshotId: "snap-0c8d535c6dfde4c4a"
-            VolumeType: "gp2"
+            SnapshotId: snap-0c8d535c6dfde4c4a
+            VolumeType: gp2
             DeleteOnTermination: true
       IamInstanceProfile: !Ref IAMRole4
       HibernationOptions:
         Configured: false
       EnclaveOptions:
         Enabled: false
-
   S3BucketPolicy2:
     Type: "AWS::S3::BucketPolicy"
     Properties:
       Bucket: !Ref S3Bucket
       PolicyDocument:
-        Version: "2012-10-17"
-        Id: "Policy1335892530063"
+        Version: 2012-10-17
+        Id: Policy1335892530063
         Statement:
-          - Sid: "Stmt1335892526596"
-            Effect: "Allow"
+          - Sid: Stmt1335892526596
+            Effect: Allow
             Principal:
               AWS: "arn:aws:iam::371652583900:user/utilization"
             Action: "s3:PutObject"
             Resource: !Sub "arn:aws:s3:::${S3Bucket}/*"
-
-  GuardDutyFilter:
-    Type: "AWS::GuardDuty::Filter"
-    Properties:
-      Action: "NOOP"
-      Name: "medium-and-hi"
-      Rank: 1
-      DetectorId: "f6bb6f018cc8c67cdaf603f481545a9c"
-      FindingCriteria:
-        Criterion:
-          severity:
-            Neq:
-              - "1"
-              - "2"
-              - "3"
-            NotEquals:
-              - "1"
-              - "2"
-              - "3"
-          "service.archived":
-            Eq:
-              - "false"
-            Equals:
-              - "false"
-
   Route53HostedZone:
     Type: "AWS::Route53::HostedZone"
     Properties:
       Name: !Ref Route53RecordSet
-
   LogsLogGroup:
     Type: "AWS::Logs::LogGroup"
     Properties:
       LogGroupName: !Sub "/aws/eks/${RDSDBInstance}/cluster"
-
-  RDSDBSubnetGroup:
-    Type: "AWS::RDS::DBSubnetGroup"
-    Properties:
-      DBSubnetGroupDescription: "Created from the RDS Management Console"
-      DBSubnetGroupName: !Sub "default-${EC2VPC}"
-      SubnetIds:
-        - !Ref EC2Subnet3
-        - !Ref EC2Subnet2
-        - !Ref EC2Subnet
-        - !Ref EC2Subnet4
-
-  IAMGroup:
-    Type: "AWS::IAM::Group"
-    Properties:
-      Path: "/"
-      GroupName: "DLT-support"
-      ManagedPolicyArns:
-        - "arn:aws:iam::512084481048:policy/DLT-AWS-Support-Access"
-
-  IAMServiceLinkedRole:
-    Type: "AWS::IAM::ServiceLinkedRole"
-    Properties:
-      AWSServiceName: "elasticache.amazonaws.com"
-      Description: "This policy allows ElastiCache to manage AWS resources on your behalf as necessary for managing your cache."
-
-  IAMServiceLinkedRole2:
-    Type: "AWS::IAM::ServiceLinkedRole"
-    Properties:
-      AWSServiceName: "elasticloadbalancing.amazonaws.com"
-      Description: "Allows ELB to call AWS services on your behalf."
-
-  IAMServiceLinkedRole3:
-    Type: "AWS::IAM::ServiceLinkedRole"
-    Properties:
-      AWSServiceName: "eks.amazonaws.com"
-      Description: "Allows Amazon EKS to call AWS services on your behalf."
-
-  NeptuneDBSubnetGroup:
-    Type: "AWS::Neptune::DBSubnetGroup"
-    Properties:
-      DBSubnetGroupName: !Sub "default-${EC2VPC}"
-      DBSubnetGroupDescription: "Created from the RDS Management Console"
-      SubnetIds:
-        - !Ref EC2Subnet3
-        - !Ref EC2Subnet2
-        - !Ref EC2Subnet
-        - !Ref EC2Subnet4
-
-  IAMServiceLinkedRole4:
-    Type: "AWS::IAM::ServiceLinkedRole"
-    Properties:
-      AWSServiceName: "autoscaling.amazonaws.com"
-      Description: "Default Service-Linked Role enables access to AWS Services and Resources used or managed by Auto Scaling"
-
   IAMServiceLinkedRole5:
     Type: "AWS::IAM::ServiceLinkedRole"
     Properties:
-      AWSServiceName: "config.amazonaws.com"
-
-  IAMServiceLinkedRole6:
-    Type: "AWS::IAM::ServiceLinkedRole"
-    Properties:
-      AWSServiceName: "eks-nodegroup.amazonaws.com"
-      Description: "This policy allows Amazon EKS to create and manage Nodegroups"
-
-  IAMServiceLinkedRole7:
-    Type: "AWS::IAM::ServiceLinkedRole"
-    Properties:
-      AWSServiceName: "rds.amazonaws.com"
-      Description: "Allows Amazon RDS to manage AWS resources on your behalf"
-
+      AWSServiceName: config.amazonaws.com
   EC2Subnet:
     Type: "AWS::EC2::Subnet"
     Properties:
       AvailabilityZone: !GetAtt EC2Subnet2.AvailabilityZone
-      CidrBlock: "172.28.2.0/24"
+      CidrBlock: 172.28.2.0/24
       VpcId: !Ref EC2VPC
       MapPublicIpOnLaunch: true
-
   EC2Subnet2:
     Type: "AWS::EC2::Subnet"
     Properties:
-      AvailabilityZone: "us-east-1b"
-      CidrBlock: "172.28.3.0/24"
+      AvailabilityZone: us-east-1b
+      CidrBlock: 172.28.3.0/24
       VpcId: !Ref EC2VPC
       MapPublicIpOnLaunch: false
-
-  EC2Subnet3:
-    Type: "AWS::EC2::Subnet"
-    Properties:
-      AvailabilityZone: !GetAtt EC2Subnet4.AvailabilityZone
-      CidrBlock: "172.28.1.0/24"
-      VpcId: !Ref EC2VPC
-      MapPublicIpOnLaunch: false
-
-  IAMServiceLinkedRole8:
-    Type: "AWS::IAM::ServiceLinkedRole"
-    Properties:
-      AWSServiceName: "organizations.amazonaws.com"
-      Description: "Service-linked role used by AWS Organizations to enable integration of other AWS services with Organizations."
-
-  IAMServiceLinkedRole9:
-    Type: "AWS::IAM::ServiceLinkedRole"
-    Properties:
-      AWSServiceName: "guardduty.amazonaws.com"
-      Description: "A service-linked role required for Amazon GuardDuty to access your resources. "
-
   ConfigDeliveryChannel:
     Type: "AWS::Config::DeliveryChannel"
     Properties:
-      Name: "default"
+      Name: default
       S3BucketName: !Ref S3Bucket2
-
-  EC2Subnet4:
-    Type: "AWS::EC2::Subnet"
-    Properties:
-      AvailabilityZone: "us-east-1a"
-      CidrBlock: "172.28.0.0/24"
-      VpcId: !Ref EC2VPC
-      MapPublicIpOnLaunch: true
-      Tags:
-        - Key: "Description"
-          Value: "DO NOT EDIT (managed by cloudformation) Source: go-ops/products/service-account-management/global/vpc/generated-templates/funcx.cfn"
-        - Key: "Name"
-          Value: "funcx-general-public-a-cfn"
-        - Key: "kubernetes.io/cluster/funcx-dev"
-          Value: "shared"
-        - Key: "template_source"
-          Value: "UNSPECIFIED"
-
   IAMRole6:
     Type: "AWS::IAM::Role"
     Properties:
-      Path: "/"
-      RoleName: "EKSNodeRole"
-      AssumeRolePolicyDocument: '{"Version":"2012-10-17","Statement":[{"Effect":"Allow","Principal":{"Service":"ec2.amazonaws.com"},"Action":"sts:AssumeRole"}]}'
+      Path: /
+      RoleName: EKSNodeRole
+      AssumeRolePolicyDocument: >-
+        {"Version":"2012-10-17","Statement":[{"Effect":"Allow","Principal":{"Service":"ec2.amazonaws.com"},"Action":"sts:AssumeRole"}]}
       MaxSessionDuration: 3600
       ManagedPolicyArns:
         - "arn:aws:iam::aws:policy/AmazonEKSWorkerNodePolicy"
         - "arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly"
         - "arn:aws:iam::aws:policy/AmazonEKS_CNI_Policy"
-      Description: "Allows EC2 instances to call AWS services on your behalf."
-
+      Description: Allows EC2 instances to call AWS services on your behalf.
   IAMRole7:
     Type: "AWS::IAM::Role"
     Properties:
-      Path: "/"
-      RoleName: "eksClusterRole"
-      AssumeRolePolicyDocument: '{"Version":"2012-10-17","Statement":[{"Effect":"Allow","Principal":{"Service":"eks.amazonaws.com"},"Action":"sts:AssumeRole"}]}'
+      Path: /
+      RoleName: eksClusterRole
+      AssumeRolePolicyDocument: >-
+        {"Version":"2012-10-17","Statement":[{"Effect":"Allow","Principal":{"Service":"eks.amazonaws.com"},"Action":"sts:AssumeRole"}]}
       MaxSessionDuration: 3600
       ManagedPolicyArns:
         - "arn:aws:iam::aws:policy/AmazonEKSClusterPolicy"
         - !Ref IAMManagedPolicy2
-      Description: "Allows access to other AWS service resources that are required to operate clusters managed by EKS."
-
+      Description: >-
+        Allows access to other AWS service resources that are required to
+        operate clusters managed by EKS.
   Route53RecordSet:
     Type: "AWS::Route53::RecordSet"
     Properties:
       Name: !Ref Route53RecordSet2
-      Type: "NS"
+      Type: NS
       TTL: 172800
       ResourceRecords:
-        - "ns-14.awsdns-01.com."
-        - "ns-575.awsdns-07.net."
-        - "ns-1736.awsdns-25.co.uk."
-        - "ns-1194.awsdns-21.org."
-      HostedZoneId: "Z088230012AJ4ELC0M1Y0"
-
+        - ns-14.awsdns-01.com.
+        - ns-575.awsdns-07.net.
+        - ns-1736.awsdns-25.co.uk.
+        - ns-1194.awsdns-21.org.
+      HostedZoneId: Z088230012AJ4ELC0M1Y0
   Route53RecordSet2:
     Type: "AWS::Route53::RecordSet"
     Properties:
-      Name: "dev.funcx.org."
-      Type: "SOA"
+      Name: dev.funcx.org.
+      Type: SOA
       TTL: 900
       ResourceRecords:
-        - "ns-14.awsdns-01.com. awsdns-hostmaster.amazon.com. 1 7200 900 1209600 86400"
-      HostedZoneId: "Z088230012AJ4ELC0M1Y0"
-
+        - >-
+          ns-14.awsdns-01.com. awsdns-hostmaster.amazon.com. 1 7200 900 1209600
+          86400
+      HostedZoneId: Z088230012AJ4ELC0M1Y0
   Route53RecordSet3:
     Type: "AWS::Route53::RecordSet"
     Properties:
       Name: !Sub "api.${Route53RecordSet}"
-      Type: "A"
+      Type: A
       AliasTarget:
         HostedZoneId: !GetAtt ElasticLoadBalancingV2LoadBalancer.CanonicalHostedZoneID
         DNSName: !Sub "${ElasticLoadBalancingV2LoadBalancer.DNSName}."
         EvaluateTargetHealth: true
       HostedZoneId: !Ref Route53HostedZone
-
-  IAMRole13:
-    Type: "AWS::IAM::Role"
-    Properties:
-      Path: "/"
-      RoleName: "monitor_reader"
-      AssumeRolePolicyDocument: '{"Version":"2012-10-17","Statement":[{"Sid":"","Effect":"Allow","Principal":{"AWS":"arn:aws:iam::942379385228:root"},"Action":"sts:AssumeRole","Condition":{"Bool":{"aws:MultiFactorAuthPresent":"true"}}}]}'
-      MaxSessionDuration: 3600
-      ManagedPolicyArns:
-        - !Ref IAMManagedPolicy9
-      Description: "ReadOnlyAccess rights. DO NOT EDIT (managed by cloudformation) Source: go-ops/products/service-account-management/global/iam/roles-and-policies-template.cfn"
-      Tags:
-        - Key: "template_source"
-          Value: "go-ops/products/service-account-management/global/iam/roles-and-policies-template.cfn"
-
   IAMRole14:
     Type: "AWS::IAM::Role"
     Properties:
-      Path: "/"
-      RoleName: "rds-monitoring-role"
-      AssumeRolePolicyDocument: '{"Version":"2012-10-17","Statement":[{"Sid":"","Effect":"Allow","Principal":{"Service":"monitoring.rds.amazonaws.com"},"Action":"sts:AssumeRole"}]}'
+      Path: /
+      RoleName: rds-monitoring-role
+      AssumeRolePolicyDocument: >-
+        {"Version":"2012-10-17","Statement":[{"Sid":"","Effect":"Allow","Principal":{"Service":"monitoring.rds.amazonaws.com"},"Action":"sts:AssumeRole"}]}
       MaxSessionDuration: 3600
       ManagedPolicyArns:
         - "arn:aws:iam::aws:policy/service-role/AmazonRDSEnhancedMonitoringRole"
-
   IAMRole15:
     Type: "AWS::IAM::Role"
     Properties:
-      Path: "/"
-      RoleName: "globus_admin"
-      AssumeRolePolicyDocument: '{"Version":"2012-10-17","Statement":[{"Effect":"Allow","Principal":{"AWS":"arn:aws:iam::942379385228:root"},"Action":"sts:AssumeRole","Condition":{"Bool":{"aws:MultiFactorAuthPresent":"true"}}}]}'
+      Path: /
+      RoleName: globus_admin
+      AssumeRolePolicyDocument: >-
+        {"Version":"2012-10-17","Statement":[{"Effect":"Allow","Principal":{"AWS":"arn:aws:iam::942379385228:root"},"Action":"sts:AssumeRole","Condition":{"Bool":{"aws:MultiFactorAuthPresent":"true"}}}]}
       MaxSessionDuration: 3600
       ManagedPolicyArns:
         - "arn:aws:iam::aws:policy/AdministratorAccess"
-
-  IAMUser:
-    Type: "AWS::IAM::User"
-    Properties:
-      Path: "/"
-      UserName: !Ref IAMGroup
-      Groups:
-        - !Ref IAMGroup
-
-  S3StorageLens:
-    Type: "AWS::S3::StorageLens"
-    Properties:
-      StorageLensConfiguration:
-        AccountLevel:
-          BucketLevel: {}
-        Id: "default-account-dashboard"
-        IsEnabled: true
-
   IAMPolicy:
     Type: "AWS::IAM::Policy"
     Properties:
-      PolicyDocument: '{"Version":"2012-10-17","Statement":[{"Action":["ec2:DescribeAddresses","ec2:DescribeInstances","ec2:DescribeSecurityGroups","ec2:DescribeTags","ec2:DescribeVolumes","ec2:DescribeSnapshots","ec2:DescribeReservedInstances","ec2:DescribeReservedInstancesOfferings","elasticloadbalancing:DescribeLoadBalancers","rds:DescribeDBInstances","rds:DescribeDBSecurityGroups","redshift:DescribeClusters","redshift:DescribeClusterSnapshots","s3:List*"],"Resource":["*"],"Effect":"Allow","Sid":"AwsUsageReportReadAccess"},{"Action":["ses:SendEmail","ses:SendRawEmail"],"Resource":["*"],"Effect":"Allow","Sid":"SendEmail"}]}'
+      PolicyDocument: >-
+        {"Version":"2012-10-17","Statement":[{"Action":["ec2:DescribeAddresses","ec2:DescribeInstances","ec2:DescribeSecurityGroups","ec2:DescribeTags","ec2:DescribeVolumes","ec2:DescribeSnapshots","ec2:DescribeReservedInstances","ec2:DescribeReservedInstancesOfferings","elasticloadbalancing:DescribeLoadBalancers","rds:DescribeDBInstances","rds:DescribeDBSecurityGroups","redshift:DescribeClusters","redshift:DescribeClusterSnapshots","s3:List*"],"Resource":["*"],"Effect":"Allow","Sid":"AwsUsageReportReadAccess"},{"Action":["ses:SendEmail","ses:SendRawEmail"],"Resource":["*"],"Effect":"Allow","Sid":"SendEmail"}]}
       Roles:
         - !Ref IAMRole
       PolicyName: !Sub "${IAMRole}-policy-iam-policy-cfn"
-
   IAMPolicy2:
     Type: "AWS::IAM::Policy"
     Properties:
-      PolicyDocument: '{"Version":"2012-10-17","Statement":[{"Action":["logs:CreateLogGroup","logs:CreateLogStream","logs:PutLogEvents","logs:DescribeLogGroups","logs:DescribeLogStreams"],"Resource":"*","Effect":"Allow"}]}'
+      PolicyDocument: >-
+        {"Version":"2012-10-17","Statement":[{"Action":["logs:CreateLogGroup","logs:CreateLogStream","logs:PutLogEvents","logs:DescribeLogGroups","logs:DescribeLogStreams"],"Resource":"*","Effect":"Allow"}]}
       Roles:
         - !Ref IAMRole11
-      PolicyName: "write-cwlogs"
-
+      PolicyName: write-cwlogs
   ElasticLoadBalancingV2LoadBalancer:
     Type: "AWS::ElasticLoadBalancingV2::LoadBalancer"
     Properties:
-      Name: "a1fc35fddf9434092b0606e2eda91c42"
-      Scheme: "internet-facing"
-      Type: "network"
+      Name: a1fc35fddf9434092b0606e2eda91c42
+      Scheme: internet-facing
+      Type: network
       Subnets:
         - !Ref EC2Subnet
         - !Ref EC2Subnet4
-      IpAddressType: "ipv4"
+      IpAddressType: ipv4
       LoadBalancerAttributes:
-        - Key: "access_logs.s3.enabled"
+        - Key: access_logs.s3.enabled
           Value: "false"
-        - Key: "deletion_protection.enabled"
+        - Key: deletion_protection.enabled
           Value: "false"
-        - Key: "load_balancing.cross_zone.enabled"
+        - Key: load_balancing.cross_zone.enabled
           Value: "true"
-
   EC2VPCGatewayAttachment:
     Type: "AWS::EC2::VPCGatewayAttachment"
     Properties:
       InternetGatewayId: !Ref EC2InternetGateway
       VpcId: !Ref EC2VPC
-
   EC2InternetGateway:
     Type: "AWS::EC2::InternetGateway"
     Properties:
       Tags:
-        - Key: "template_source"
-          Value: "UNSPECIFIED"
+        - Key: template_source
+          Value: UNSPECIFIED
         - Key: "aws:cloudformation:stack-name"
-          Value: "vpc-funcx"
+          Value: vpc-funcx
         - Key: "aws:cloudformation:logical-id"
-          Value: "InternetGateway"
+          Value: InternetGateway
         - Key: "aws:cloudformation:stack-id"
-          Value: "arn:aws:cloudformation:us-east-1:512084481048:stack/vpc-funcx/22b92c60-5087-11eb-a957-0e9b76727ea5"
-
+          Value: >-
+            arn:aws:cloudformation:us-east-1:512084481048:stack/vpc-funcx/22b92c60-5087-11eb-a957-0e9b76727ea5
   ElastiCacheUser:
     Type: "AWS::ElastiCache::User"
     Properties:
-      UserId: "default"
-      UserName: "default"
-      Engine: "redis"
-      AccessString: "on ~* +@all"
+      UserId: default
+      UserName: default
+      Engine: redis
+      AccessString: on ~* +@all
       NoPasswordRequired: true
-
   AutoScalingAutoScalingGroup:
     Type: "AWS::AutoScaling::AutoScalingGroup"
     Properties:
-      AutoScalingGroupName: "eks-60bb799a-7150-ece1-6072-8073e0412042"
+      AutoScalingGroupName: eks-60bb799a-7150-ece1-6072-8073e0412042
       MixedInstancesPolicy:
         LaunchTemplate:
           LaunchTemplateSpecification:
             LaunchTemplateId: !Ref EC2LaunchTemplate
-            LaunchTemplateName: "eks-60bb799a-7150-ece1-6072-8073e0412042"
+            LaunchTemplateName: eks-60bb799a-7150-ece1-6072-8073e0412042
             Version: "1"
           Overrides:
-            - InstanceType: "t3.medium"
+            - InstanceType: t3.medium
         InstancesDistribution:
-          OnDemandAllocationStrategy: "prioritized"
+          OnDemandAllocationStrategy: prioritized
           OnDemandBaseCapacity: 0
           OnDemandPercentageAboveBaseCapacity: 100
-          SpotAllocationStrategy: "lowest-price"
+          SpotAllocationStrategy: lowest-price
           SpotInstancePools: 2
       MinSize: 1
       MaxSize: 2
@@ -977,415 +543,278 @@ Resources:
       AvailabilityZones:
         - !GetAtt EC2Instance5.AvailabilityZone
         - !GetAtt EC2Subnet.AvailabilityZone
-      HealthCheckType: "EC2"
+      HealthCheckType: EC2
       HealthCheckGracePeriod: 15
       VPCZoneIdentifier:
         - !Ref EC2Subnet4
         - !Ref EC2Subnet
       TerminationPolicies:
-        - "AllocationStrategy"
-        - "OldestLaunchTemplate"
-        - "OldestInstance"
-      ServiceLinkedRoleARN: "arn:aws:iam::512084481048:role/aws-service-role/autoscaling.amazonaws.com/AWSServiceRoleForAutoScaling"
+        - AllocationStrategy
+        - OldestLaunchTemplate
+        - OldestInstance
+      ServiceLinkedRoleARN: >-
+        arn:aws:iam::512084481048:role/aws-service-role/autoscaling.amazonaws.com/AWSServiceRoleForAutoScaling
       Tags:
         - Key: "eks:cluster-name"
-          Value: "funcx-dev"
+          Value: funcx-dev
           PropagateAtLaunch: true
         - Key: "eks:nodegroup-name"
-          Value: "funcx-dev-eks-node-group"
+          Value: funcx-dev-eks-node-group
           PropagateAtLaunch: true
-        - Key: "k8s.io/cluster-autoscaler/enabled"
+        - Key: k8s.io/cluster-autoscaler/enabled
           Value: "true"
           PropagateAtLaunch: true
-        - Key: "k8s.io/cluster-autoscaler/funcx-dev"
-          Value: "owned"
+        - Key: k8s.io/cluster-autoscaler/funcx-dev
+          Value: owned
           PropagateAtLaunch: true
-        - Key: "kubernetes.io/cluster/funcx-dev"
-          Value: "owned"
+        - Key: kubernetes.io/cluster/funcx-dev
+          Value: owned
           PropagateAtLaunch: true
       NewInstancesProtectedFromScaleIn: false
       CapacityRebalance: true
-
   ElasticLoadBalancingV2Listener:
     Type: "AWS::ElasticLoadBalancingV2::Listener"
     Properties:
       LoadBalancerArn: !Ref ElasticLoadBalancingV2LoadBalancer
       Port: 80
-      Protocol: "TCP"
+      Protocol: TCP
       DefaultActions:
         - TargetGroupArn: !Ref ElasticLoadBalancingV2TargetGroup
-          Type: "forward"
-
+          Type: forward
   ElasticLoadBalancingV2Listener2:
     Type: "AWS::ElasticLoadBalancingV2::Listener"
     Properties:
       LoadBalancerArn: !Ref ElasticLoadBalancingV2LoadBalancer
       Port: 443
-      Protocol: "TCP"
+      Protocol: TCP
       DefaultActions:
         - TargetGroupArn: !Ref ElasticLoadBalancingV2TargetGroup2
-          Type: "forward"
-
+          Type: forward
   IAMInstanceProfile:
     Type: "AWS::IAM::InstanceProfile"
     Properties:
-      Path: "/"
+      Path: /
       InstanceProfileName: !Ref AutoScalingAutoScalingGroup
       Roles:
         - !Ref IAMRole6
-
   IAMInstanceProfile2:
     Type: "AWS::IAM::InstanceProfile"
     Properties:
-      Path: "/"
+      Path: /
       InstanceProfileName: !Ref IAMRole6
       Roles:
         - !Ref IAMRole6
-
-  IAMInstanceProfile3:
-    Type: "AWS::IAM::InstanceProfile"
-    Properties:
-      Path: "/"
-      InstanceProfileName: !Ref IAMRole4
-      Roles:
-        - !Ref IAMRole4
-
-  EC2EIP:
-    Type: "AWS::EC2::EIP"
-    Properties:
-      Domain: "vpc"
-      Tags:
-        - Key: "aws:cloudformation:logical-id"
-          Value: "NatGatewayEIP"
-        - Key: "aws:cloudformation:stack-name"
-          Value: "vpc-funcx"
-        - Key: "template_source"
-          Value: "UNSPECIFIED"
-        - Key: "aws:cloudformation:stack-id"
-          Value: "arn:aws:cloudformation:us-east-1:512084481048:stack/vpc-funcx/22b92c60-5087-11eb-a957-0e9b76727ea5"
-
   EC2EIPAssociation:
     Type: "AWS::EC2::EIPAssociation"
     Properties:
       AllocationId: !GetAtt EC2EIP.AllocationId
-      NetworkInterfaceId: "eni-02ee77f3c085e90d5"
-      PrivateIpAddress: "172.28.0.9"
-
+      NetworkInterfaceId: eni-02ee77f3c085e90d5
+      PrivateIpAddress: 172.28.0.9
   AutoScalingLifecycleHook:
     Type: "AWS::AutoScaling::LifecycleHook"
     Properties:
-      LifecycleHookName: "Launch-LC-Hook"
+      LifecycleHookName: Launch-LC-Hook
       AutoScalingGroupName: !Ref AutoScalingAutoScalingGroup
       NotificationTargetARN: "arn:aws:sns:us-east-1:162373472942:eks-asg-lifecycle-hook-topic"
       HeartbeatTimeout: 1800
-      DefaultResult: "CONTINUE"
+      DefaultResult: CONTINUE
       LifecycleTransition: "autoscaling:EC2_INSTANCE_LAUNCHING"
-
   AutoScalingLifecycleHook2:
     Type: "AWS::AutoScaling::LifecycleHook"
     Properties:
-      LifecycleHookName: "Terminate-LC-Hook"
+      LifecycleHookName: Terminate-LC-Hook
       AutoScalingGroupName: !Ref AutoScalingAutoScalingGroup
       NotificationTargetARN: "arn:aws:sns:us-east-1:162373472942:eks-asg-lifecycle-hook-topic"
       HeartbeatTimeout: 1800
-      DefaultResult: "CONTINUE"
+      DefaultResult: CONTINUE
       LifecycleTransition: "autoscaling:EC2_INSTANCE_TERMINATING"
-
   EC2LaunchTemplate:
     Type: "AWS::EC2::LaunchTemplate"
     Properties:
-      LaunchTemplateName: "eks-60bb799a-7150-ece1-6072-8073e0412042"
+      LaunchTemplateName: eks-60bb799a-7150-ece1-6072-8073e0412042
       LaunchTemplateData:
-        UserData: "TUlNRS1WZXJzaW9uOiAxLjAKQ29udGVudC1UeXBlOiBtdWx0aXBhcnQvbWl4ZWQ7IGJvdW5kYXJ5PSIvLyIKCi0tLy8KQ29udGVudC1UeXBlOiB0ZXh0L3gtc2hlbGxzY3JpcHQ7IGNoYXJzZXQ9InVzLWFzY2lpIgojIS9iaW4vYmFzaApzZXQgLWV4CkI2NF9DTFVTVEVSX0NBPUxTMHRMUzFDUlVkSlRpQkRSVkpVU1VaSlEwRlVSUzB0TFMwdENrMUpTVU41UkVORFFXSkRaMEYzU1VKQlowbENRVVJCVGtKbmEzRm9hMmxIT1hjd1FrRlJjMFpCUkVGV1RWSk5kMFZSV1VSV1VWRkVSWGR3Y21SWFNtd0tZMjAxYkdSSFZucE5RalJZUkZSSmVFMUVSWGhOVkVsM1RYcEJkMDVHYjFoRVZFMTRUVVJGZDA5VVNYZE5la0YzVGtadmQwWlVSVlJOUWtWSFFURlZSUXBCZUUxTFlUTldhVnBZU25WYVdGSnNZM3BEUTBGVFNYZEVVVmxLUzI5YVNXaDJZMDVCVVVWQ1FsRkJSR2RuUlZCQlJFTkRRVkZ2UTJkblJVSkJUR3RFQ2pCV2IzcHdRMVJyZWxZM2NWcHFUVWxyWm5kaVYwaDVjbG8xUnpOQ1IySk9jbXB0YlVjemJtVnVXR2hyY1U1SGVuQldaa1FyUmpSS1NsQXJNM2Q1T0RJS1MzTldhMjB6ZFhZMVNYcHZiRWxPVVVOcFNEbElXRkptVTI5dFJIQkxReTlhYjNkcmNqUk5OVTFQUVVGWWJVbFNaSGgzYkM4MlZteGlNelZyWldrdlRncGxPVUZ2YXk4dmFIQktWMjh6UVhCQ1ZGaDFMeXRSTVdGRVVsUm1RV3d4WWpoclRqVnBjbGh4TTNsNlZtdGhLMFZXWm1zclRESlRTVWhDTWpZNWVUUkxDblIxTVVOQlowdDRURkJxVTNGYVlVNVNVakZKV2pST1dtbDJOSG92WTAxc1luZFphVnAxUm01aGMyaGtWVXRDVkZKb2RWZGpLM2t3YkdaVFRDczVRV1FLWkRBMWEweG1iU3RrZUdoNFZGSkNNM0p6VTFweFRuWTJZbU5MYTNsTlFXdEdTbUZVTkVweVRXZEtNMlZXYUdKSU5Fc3ZlbUZSWmxCTFkxcEJibTluZHdwaGJEUjRlbmRGZWpOVVdsTXZRVmhRVUVoelEwRjNSVUZCWVUxcVRVTkZkMFJuV1VSV1VqQlFRVkZJTDBKQlVVUkJaMHRyVFVFNFIwRXhWV1JGZDBWQ0NpOTNVVVpOUVUxQ1FXWTRkMFJSV1VwTGIxcEphSFpqVGtGUlJVeENVVUZFWjJkRlFrRkdUbmxxVDBKcFFYbHpiSEo2VW5WS1NtVm1kV04yY2tKc2FERUtRVUZoT1ZST09GQkxiVTlqYjJoeGIwdFZSazl3VTFwbVNscEdaRlpKZDFwcllXMDJVMnBVS3l0M1JIUmpObE5PUTAxSVQwUlpaa2hNY0dGV1MzTXZad3AxU0UxcGIyZG1VaTlOZEVKR09VVmplRXhoWm1GS1ZHODFhbk5YUXpWcFYxb3lSVlI0VG5GcE5tVTVhMXB1UldWQ00yZEtiVmx1YkVkaFpHUk5VRXBzQ2tWWlJXVnVWamRSU1hBNU9VbHRiREZoYzFSNGNtaHBWbEIxU21kdGVYVXhTV0ZUYVhVdlJ5dFdUMnBUWTFsa2RHSkxTbEoxV0U0NWRUUkpRWGxYYmxNS2IyOTNlU3RaWTBkRU4zVklVbFJ6YkV4WU4wVm1XVEJsYVZvMlIyNUZhV3N6Uld4SU5uVk1kMWs1VDFoalNIcGtablIwUjJoSGIyVjNZblV2Y2pKelRBcElVVkJvYm5KbmNVcEtlU3QzTWxaNFRtcDBlRGhsTVcxamIyeHhOSEZyUTNvM2NFTjNVSFZvYXpNMlIyUnBRMWhGT0VZeFRuQkNUVkZRT0QwS0xTMHRMUzFGVGtRZ1EwVlNWRWxHU1VOQlZFVXRMUzB0TFFvPQpBUElfU0VSVkVSX1VSTD1odHRwczovL0Q1NDU5NDc4RUEzMjQ0MUI4REEwNDMxM0EyMDEyOUI3LmdyNy51cy1lYXN0LTEuZWtzLmFtYXpvbmF3cy5jb20KSzhTX0NMVVNURVJfRE5TX0lQPTEwLjEwMC4wLjEwCi9ldGMvZWtzL2Jvb3RzdHJhcC5zaCBmdW5jeC1kZXYgLS1rdWJlbGV0LWV4dHJhLWFyZ3MgJy0tbm9kZS1sYWJlbHM9ZWtzLmFtYXpvbmF3cy5jb20vbm9kZWdyb3VwLWltYWdlPWFtaS0wZTYwOTAyNGU0ZGJjZTRhNSxla3MuYW1hem9uYXdzLmNvbS9jYXBhY2l0eVR5cGU9T05fREVNQU5ELGVrcy5hbWF6b25hd3MuY29tL25vZGVncm91cD1mdW5jeC1kZXYtZWtzLW5vZGUtZ3JvdXAnIC0tYjY0LWNsdXN0ZXItY2EgJEI2NF9DTFVTVEVSX0NBIC0tYXBpc2VydmVyLWVuZHBvaW50ICRBUElfU0VSVkVSX1VSTCAtLWRucy1jbHVzdGVyLWlwICRLOFNfQ0xVU1RFUl9ETlNfSVAKCi0tLy8tLQ=="
+        UserData: >-
+          TUlNRS1WZXJzaW9uOiAxLjAKQ29udGVudC1UeXBlOiBtdWx0aXBhcnQvbWl4ZWQ7IGJvdW5kYXJ5PSIvLyIKCi0tLy8KQ29udGVudC1UeXBlOiB0ZXh0L3gtc2hlbGxzY3JpcHQ7IGNoYXJzZXQ9InVzLWFzY2lpIgojIS9iaW4vYmFzaApzZXQgLWV4CkI2NF9DTFVTVEVSX0NBPUxTMHRMUzFDUlVkSlRpQkRSVkpVU1VaSlEwRlVSUzB0TFMwdENrMUpTVU41UkVORFFXSkRaMEYzU1VKQlowbENRVVJCVGtKbmEzRm9hMmxIT1hjd1FrRlJjMFpCUkVGV1RWSk5kMFZSV1VSV1VWRkVSWGR3Y21SWFNtd0tZMjAxYkdSSFZucE5RalJZUkZSSmVFMUVSWGhOVkVsM1RYcEJkMDVHYjFoRVZFMTRUVVJGZDA5VVNYZE5la0YzVGtadmQwWlVSVlJOUWtWSFFURlZSUXBCZUUxTFlUTldhVnBZU25WYVdGSnNZM3BEUTBGVFNYZEVVVmxLUzI5YVNXaDJZMDVCVVVWQ1FsRkJSR2RuUlZCQlJFTkRRVkZ2UTJkblJVSkJUR3RFQ2pCV2IzcHdRMVJyZWxZM2NWcHFUVWxyWm5kaVYwaDVjbG8xUnpOQ1IySk9jbXB0YlVjemJtVnVXR2hyY1U1SGVuQldaa1FyUmpSS1NsQXJNM2Q1T0RJS1MzTldhMjB6ZFhZMVNYcHZiRWxPVVVOcFNEbElXRkptVTI5dFJIQkxReTlhYjNkcmNqUk5OVTFQUVVGWWJVbFNaSGgzYkM4MlZteGlNelZyWldrdlRncGxPVUZ2YXk4dmFIQktWMjh6UVhCQ1ZGaDFMeXRSTVdGRVVsUm1RV3d4WWpoclRqVnBjbGh4TTNsNlZtdGhLMFZXWm1zclRESlRTVWhDTWpZNWVUUkxDblIxTVVOQlowdDRURkJxVTNGYVlVNVNVakZKV2pST1dtbDJOSG92WTAxc1luZFphVnAxUm01aGMyaGtWVXRDVkZKb2RWZGpLM2t3YkdaVFRDczVRV1FLWkRBMWEweG1iU3RrZUdoNFZGSkNNM0p6VTFweFRuWTJZbU5MYTNsTlFXdEdTbUZVTkVweVRXZEtNMlZXYUdKSU5Fc3ZlbUZSWmxCTFkxcEJibTluZHdwaGJEUjRlbmRGZWpOVVdsTXZRVmhRVUVoelEwRjNSVUZCWVUxcVRVTkZkMFJuV1VSV1VqQlFRVkZJTDBKQlVVUkJaMHRyVFVFNFIwRXhWV1JGZDBWQ0NpOTNVVVpOUVUxQ1FXWTRkMFJSV1VwTGIxcEphSFpqVGtGUlJVeENVVUZFWjJkRlFrRkdUbmxxVDBKcFFYbHpiSEo2VW5WS1NtVm1kV04yY2tKc2FERUtRVUZoT1ZST09GQkxiVTlqYjJoeGIwdFZSazl3VTFwbVNscEdaRlpKZDFwcllXMDJVMnBVS3l0M1JIUmpObE5PUTAxSVQwUlpaa2hNY0dGV1MzTXZad3AxU0UxcGIyZG1VaTlOZEVKR09VVmplRXhoWm1GS1ZHODFhbk5YUXpWcFYxb3lSVlI0VG5GcE5tVTVhMXB1UldWQ00yZEtiVmx1YkVkaFpHUk5VRXBzQ2tWWlJXVnVWamRSU1hBNU9VbHRiREZoYzFSNGNtaHBWbEIxU21kdGVYVXhTV0ZUYVhVdlJ5dFdUMnBUWTFsa2RHSkxTbEoxV0U0NWRUUkpRWGxYYmxNS2IyOTNlU3RaWTBkRU4zVklVbFJ6YkV4WU4wVm1XVEJsYVZvMlIyNUZhV3N6Uld4SU5uVk1kMWs1VDFoalNIcGtablIwUjJoSGIyVjNZblV2Y2pKelRBcElVVkJvYm5KbmNVcEtlU3QzTWxaNFRtcDBlRGhsTVcxamIyeHhOSEZyUTNvM2NFTjNVSFZvYXpNMlIyUnBRMWhGT0VZeFRuQkNUVkZRT0QwS0xTMHRMUzFGVGtRZ1EwVlNWRWxHU1VOQlZFVXRMUzB0TFFvPQpBUElfU0VSVkVSX1VSTD1odHRwczovL0Q1NDU5NDc4RUEzMjQ0MUI4REEwNDMxM0EyMDEyOUI3LmdyNy51cy1lYXN0LTEuZWtzLmFtYXpvbmF3cy5jb20KSzhTX0NMVVNURVJfRE5TX0lQPTEwLjEwMC4wLjEwCi9ldGMvZWtzL2Jvb3RzdHJhcC5zaCBmdW5jeC1kZXYgLS1rdWJlbGV0LWV4dHJhLWFyZ3MgJy0tbm9kZS1sYWJlbHM9ZWtzLmFtYXpvbmF3cy5jb20vbm9kZWdyb3VwLWltYWdlPWFtaS0wZTYwOTAyNGU0ZGJjZTRhNSxla3MuYW1hem9uYXdzLmNvbS9jYXBhY2l0eVR5cGU9T05fREVNQU5ELGVrcy5hbWF6b25hd3MuY29tL25vZGVncm91cD1mdW5jeC1kZXYtZWtzLW5vZGUtZ3JvdXAnIC0tYjY0LWNsdXN0ZXItY2EgJEI2NF9DTFVTVEVSX0NBIC0tYXBpc2VydmVyLWVuZHBvaW50ICRBUElfU0VSVkVSX1VSTCAtLWRucy1jbHVzdGVyLWlwICRLOFNfQ0xVU1RFUl9ETlNfSVAKCi0tLy8tLQ==
         BlockDeviceMappings:
-          - DeviceName: "/dev/xvda"
+          - DeviceName: /dev/xvda
             Ebs:
               DeleteOnTermination: true
               VolumeSize: 20
-              VolumeType: "gp2"
+              VolumeType: gp2
         IamInstanceProfile:
-          Name: "eks-60bb799a-7150-ece1-6072-8073e0412042"
-        KeyName: "funcx-eks"
+          Name: eks-60bb799a-7150-ece1-6072-8073e0412042
+        KeyName: funcx-eks
         NetworkInterfaces:
           - DeviceIndex: 0
             Groups:
               - !Ref EC2SecurityGroup6
               - !Ref EC2SecurityGroup4
-        ImageId: "ami-0e609024e4dbce4a5"
-        InstanceType: "t3.medium"
+        ImageId: ami-0e609024e4dbce4a5
+        InstanceType: t3.medium
         MetadataOptions:
           HttpPutResponseHopLimit: 2
-
   EC2VPCPeeringConnection:
     Type: "AWS::EC2::VPCPeeringConnection"
     Properties:
       PeerVpcId: !Ref EC2VPC
       PeerOwnerId: "512084481048"
-      PeerRegion: "us-east-1"
-      VpcId: "vpc-000d3478"
-
+      PeerRegion: us-east-1
+      VpcId: vpc-000d3478
   ElasticLoadBalancingV2TargetGroup:
     Type: "AWS::ElasticLoadBalancingV2::TargetGroup"
     Properties:
       HealthCheckIntervalSeconds: 10
-      HealthCheckPath: "/healthz"
+      HealthCheckPath: /healthz
       Port: 30259
-      Protocol: "TCP"
+      Protocol: TCP
       HealthCheckPort: "30253"
-      HealthCheckProtocol: "HTTP"
+      HealthCheckProtocol: HTTP
       HealthCheckTimeoutSeconds: 6
       UnhealthyThresholdCount: 2
-      TargetType: "instance"
+      TargetType: instance
       Matcher:
-        HttpCode: "200-399"
+        HttpCode: 200-399
       HealthyThresholdCount: 2
       VpcId: !Ref EC2VPC
-      Name: "k8s-ingressn-ingressn-c98dcc5a0a"
+      Name: k8s-ingressn-ingressn-c98dcc5a0a
       HealthCheckEnabled: true
       TargetGroupAttributes:
-        - Key: "proxy_protocol_v2.enabled"
+        - Key: proxy_protocol_v2.enabled
           Value: "false"
-        - Key: "preserve_client_ip.enabled"
+        - Key: preserve_client_ip.enabled
           Value: "true"
-        - Key: "stickiness.enabled"
+        - Key: stickiness.enabled
           Value: "false"
-        - Key: "deregistration_delay.timeout_seconds"
+        - Key: deregistration_delay.timeout_seconds
           Value: "300"
-        - Key: "stickiness.type"
-          Value: "source_ip"
-        - Key: "deregistration_delay.connection_termination.enabled"
+        - Key: stickiness.type
+          Value: source_ip
+        - Key: deregistration_delay.connection_termination.enabled
           Value: "false"
       Targets:
         - Id: !Ref EC2Instance4
           Port: 30259
-
   ElasticLoadBalancingV2TargetGroup2:
     Type: "AWS::ElasticLoadBalancingV2::TargetGroup"
     Properties:
       HealthCheckIntervalSeconds: 10
-      HealthCheckPath: "/healthz"
+      HealthCheckPath: /healthz
       Port: 31390
-      Protocol: "TCP"
+      Protocol: TCP
       HealthCheckPort: "30253"
-      HealthCheckProtocol: "HTTP"
+      HealthCheckProtocol: HTTP
       HealthCheckTimeoutSeconds: 6
       UnhealthyThresholdCount: 2
-      TargetType: "instance"
+      TargetType: instance
       Matcher:
-        HttpCode: "200-399"
+        HttpCode: 200-399
       HealthyThresholdCount: 2
       VpcId: !Ref EC2VPC
-      Name: "k8s-ingressn-ingressn-0e027f247c"
+      Name: k8s-ingressn-ingressn-0e027f247c
       HealthCheckEnabled: true
       TargetGroupAttributes:
-        - Key: "proxy_protocol_v2.enabled"
+        - Key: proxy_protocol_v2.enabled
           Value: "false"
-        - Key: "preserve_client_ip.enabled"
+        - Key: preserve_client_ip.enabled
           Value: "true"
-        - Key: "stickiness.enabled"
+        - Key: stickiness.enabled
           Value: "false"
-        - Key: "deregistration_delay.timeout_seconds"
+        - Key: deregistration_delay.timeout_seconds
           Value: "300"
-        - Key: "stickiness.type"
-          Value: "source_ip"
-        - Key: "deregistration_delay.connection_termination.enabled"
+        - Key: stickiness.type
+          Value: source_ip
+        - Key: deregistration_delay.connection_termination.enabled
           Value: "false"
       Targets:
         - Id: !Ref EC2Instance4
           Port: 31390
-
   EC2RouteTable:
     Type: "AWS::EC2::RouteTable"
     Properties:
       VpcId: !Ref EC2VPC
-
-  EC2Route:
-    Type: "AWS::EC2::Route"
-    Properties:
-      DestinationCidrBlock: "172.18.0.0/18"
-      VpcPeeringConnectionId: "pcx-070ea1972baf1bddd"
-      RouteTableId: !Ref EC2RouteTable2
-
-  EC2Route2:
-    Type: "AWS::EC2::Route"
-    Properties:
-      DestinationCidrBlock: "0.0.0.0/0"
-      NatGatewayId: !Ref EC2NatGateway
-      RouteTableId: !Ref EC2RouteTable2
-
   EC2SubnetRouteTableAssociation:
     Type: "AWS::EC2::SubnetRouteTableAssociation"
     Properties:
       RouteTableId: !Ref EC2RouteTable2
       SubnetId: !Ref EC2Subnet3
-
   EC2SubnetRouteTableAssociation2:
     Type: "AWS::EC2::SubnetRouteTableAssociation"
     Properties:
       RouteTableId: !Ref EC2RouteTable2
       SubnetId: !Ref EC2Subnet2
-
-  EC2RouteTable2:
-    Type: "AWS::EC2::RouteTable"
-    Properties:
-      VpcId: !Ref EC2VPC
-      Tags:
-        - Key: "aws:cloudformation:logical-id"
-          Value: "PrivRouteTable"
-        - Key: "Name"
-          Value: "funcx-general-private-subnet-routing-cfn"
-        - Key: "template_source"
-          Value: "UNSPECIFIED"
-        - Key: "aws:cloudformation:stack-name"
-          Value: "vpc-funcx"
-        - Key: "aws:cloudformation:stack-id"
-          Value: "arn:aws:cloudformation:us-east-1:512084481048:stack/vpc-funcx/22b92c60-5087-11eb-a957-0e9b76727ea5"
-        - Key: "Description"
-          Value: "DO NOT EDIT (managed by cloudformation) Source: go-ops/products/service-account-management/global/vpc/generated-templates/funcx.cfn"
-
-  EC2Route3:
-    Type: "AWS::EC2::Route"
-    Properties:
-      DestinationCidrBlock: "172.18.0.0/18"
-      VpcPeeringConnectionId: "pcx-070ea1972baf1bddd"
-      RouteTableId: !Ref EC2RouteTable3
-
   EC2Route4:
     Type: "AWS::EC2::Route"
     Properties:
-      DestinationCidrBlock: "0.0.0.0/0"
+      DestinationCidrBlock: 0.0.0.0/0
       GatewayId: !Ref EC2InternetGateway
       RouteTableId: !Ref EC2RouteTable3
-
   EC2SubnetRouteTableAssociation3:
     Type: "AWS::EC2::SubnetRouteTableAssociation"
     Properties:
       RouteTableId: !Ref EC2RouteTable3
       SubnetId: !Ref EC2Subnet4
-
   EC2SubnetRouteTableAssociation4:
     Type: "AWS::EC2::SubnetRouteTableAssociation"
     Properties:
       RouteTableId: !Ref EC2RouteTable3
       SubnetId: !Ref EC2Subnet
-
-  EC2RouteTable3:
-    Type: "AWS::EC2::RouteTable"
-    Properties:
-      VpcId: !Ref EC2VPC
-      Tags:
-        - Key: "Name"
-          Value: "funcx-general-public-subnet-routing-cfn"
-        - Key: "aws:cloudformation:stack-id"
-          Value: "arn:aws:cloudformation:us-east-1:512084481048:stack/vpc-funcx/22b92c60-5087-11eb-a957-0e9b76727ea5"
-        - Key: "aws:cloudformation:stack-name"
-          Value: "vpc-funcx"
-        - Key: "Description"
-          Value: "DO NOT EDIT (managed by cloudformation) Source: go-ops/products/service-account-management/global/vpc/generated-templates/funcx.cfn"
-        - Key: "template_source"
-          Value: "UNSPECIFIED"
-        - Key: "aws:cloudformation:logical-id"
-          Value: "PubRouteTable"
-
   EC2Volume:
     Type: "AWS::EC2::Volume"
     Properties:
       AvailabilityZone: !GetAtt EC2Instance.AvailabilityZone
       Encrypted: false
       Size: 20
-      VolumeType: "gp2"
-      SnapshotId: "snap-0bbb3dc5b05099151"
+      VolumeType: gp2
+      SnapshotId: snap-0bbb3dc5b05099151
       MultiAttachEnabled: false
-
   EC2VolumeAttachment:
     Type: "AWS::EC2::VolumeAttachment"
     Properties:
       VolumeId: !Ref EC2Volume
       InstanceId: !Ref EC2Instance4
-      Device: "/dev/xvda"
-
+      Device: /dev/xvda
   EC2Volume2:
     Type: "AWS::EC2::Volume"
     Properties:
       AvailabilityZone: !GetAtt EC2Instance.AvailabilityZone
       Encrypted: false
       Size: 20
-      VolumeType: "gp2"
-      SnapshotId: "snap-0bbb3dc5b05099151"
+      VolumeType: gp2
+      SnapshotId: snap-0bbb3dc5b05099151
       MultiAttachEnabled: false
-
   EC2VolumeAttachment2:
     Type: "AWS::EC2::VolumeAttachment"
     Properties:
       VolumeId: !Ref EC2Volume2
       InstanceId: !Ref EC2Instance3
-      Device: "/dev/xvda"
-
+      Device: /dev/xvda
   EC2Volume3:
     Type: "AWS::EC2::Volume"
     Properties:
       AvailabilityZone: !GetAtt EC2Instance.AvailabilityZone
       Encrypted: false
       Size: 8
-      VolumeType: "gp2"
-      SnapshotId: "snap-0c8d535c6dfde4c4a"
+      VolumeType: gp2
+      SnapshotId: snap-0c8d535c6dfde4c4a
       MultiAttachEnabled: false
-
   EC2VolumeAttachment3:
     Type: "AWS::EC2::VolumeAttachment"
     Properties:
       VolumeId: !Ref EC2Volume3
       InstanceId: !Ref EC2Instance5
-      Device: "/dev/sda1"
-
+      Device: /dev/sda1
   EC2NetworkInterface:
     Type: "AWS::EC2::NetworkInterface"
     Properties:
-      Description: !Sub "ELB net/${ElasticLoadBalancingV2LoadBalancer.LoadBalancerName}/dba6d1b910464b26"
-      PrivateIpAddress: "172.28.0.31"
+      Description: !Sub >-
+        ELB
+        net/${ElasticLoadBalancingV2LoadBalancer.LoadBalancerName}/dba6d1b910464b26
+      PrivateIpAddress: 172.28.0.31
       PrivateIpAddresses:
-        - PrivateIpAddress: "172.28.0.31"
+        - PrivateIpAddress: 172.28.0.31
           Primary: true
       SubnetId: !Ref EC2Subnet4
       SourceDestCheck: false
-
-  EC2NetworkInterface2:
-    Type: "AWS::EC2::NetworkInterface"
-    Properties:
-      Description: "RDSNetworkInterface"
-      PrivateIpAddress: "172.28.0.146"
-      PrivateIpAddresses:
-        - PrivateIpAddress: "172.28.0.146"
-          Primary: true
-      SubnetId: !Ref EC2Subnet4
-      SourceDestCheck: true
-      GroupSet:
-        - !Ref EC2SecurityGroup2
-
-  EC2NetworkInterface3:
-    Type: "AWS::EC2::NetworkInterface"
-    Properties:
-      Description: !Sub "ElastiCache ${ElastiCacheCacheCluster}"
-      PrivateIpAddress: "172.28.1.113"
-      PrivateIpAddresses:
-        - PrivateIpAddress: "172.28.1.113"
-          Primary: true
-      SubnetId: !Ref EC2Subnet3
-      SourceDestCheck: true
-      GroupSet:
-        - "sg-012abf0855aa23408"
-
-  EC2NetworkInterface4:
-    Type: "AWS::EC2::NetworkInterface"
-    Properties:
-      Description: !Sub "Interface for NAT Gateway ${EC2NatGateway}"
-      PrivateIpAddress: "172.28.0.9"
-      PrivateIpAddresses:
-        - PrivateIpAddress: "172.28.0.9"
-          Primary: true
-      SubnetId: !Ref EC2Subnet4
-      SourceDestCheck: false
-
   EC2NetworkInterface5:
     Type: "AWS::EC2::NetworkInterface"
     Properties:
@@ -1394,34 +823,32 @@ Resources:
       PrivateIpAddresses:
         - PrivateIpAddress: !GetAtt EC2Instance4.PrivateIp
           Primary: true
-        - PrivateIpAddress: "172.28.0.127"
+        - PrivateIpAddress: 172.28.0.127
           Primary: false
-        - PrivateIpAddress: "172.28.0.232"
+        - PrivateIpAddress: 172.28.0.232
           Primary: false
-        - PrivateIpAddress: "172.28.0.43"
+        - PrivateIpAddress: 172.28.0.43
           Primary: false
-        - PrivateIpAddress: "172.28.0.117"
+        - PrivateIpAddress: 172.28.0.117
           Primary: false
-        - PrivateIpAddress: "172.28.0.86"
+        - PrivateIpAddress: 172.28.0.86
           Primary: false
       SubnetId: !Ref EC2Subnet4
       SourceDestCheck: true
       GroupSet:
         - !Ref EC2SecurityGroup4
         - !Ref EC2SecurityGroup6
-
   EC2NetworkInterfaceAttachment:
     Type: "AWS::EC2::NetworkInterfaceAttachment"
     Properties:
-      NetworkInterfaceId: "eni-08b7ee17e46cc0c70"
+      NetworkInterfaceId: eni-08b7ee17e46cc0c70
       DeviceIndex: 0
       InstanceId: !Ref EC2Instance4
       DeleteOnTermination: true
-
   EC2NetworkInterface6:
     Type: "AWS::EC2::NetworkInterface"
     Properties:
-      Description: "Primary network interface"
+      Description: Primary network interface
       PrivateIpAddress: !GetAtt EC2Instance5.PrivateIp
       PrivateIpAddresses:
         - PrivateIpAddress: !GetAtt EC2Instance5.PrivateIp
@@ -1430,88 +857,82 @@ Resources:
       SourceDestCheck: true
       GroupSet:
         - !Ref EC2SecurityGroup3
-
   EC2NetworkInterfaceAttachment2:
     Type: "AWS::EC2::NetworkInterfaceAttachment"
     Properties:
-      NetworkInterfaceId: "eni-07d9709482c57a04e"
+      NetworkInterfaceId: eni-07d9709482c57a04e
       DeviceIndex: 0
       InstanceId: !Ref EC2Instance5
       DeleteOnTermination: true
-
   EC2NetworkInterface7:
     Type: "AWS::EC2::NetworkInterface"
     Properties:
       Description: !Sub "aws-K8S-${EC2Instance4}"
-      PrivateIpAddress: "172.28.0.140"
+      PrivateIpAddress: 172.28.0.140
       PrivateIpAddresses:
-        - PrivateIpAddress: "172.28.0.140"
+        - PrivateIpAddress: 172.28.0.140
           Primary: true
-        - PrivateIpAddress: "172.28.0.25"
+        - PrivateIpAddress: 172.28.0.25
           Primary: false
-        - PrivateIpAddress: "172.28.0.235"
+        - PrivateIpAddress: 172.28.0.235
           Primary: false
-        - PrivateIpAddress: "172.28.0.97"
+        - PrivateIpAddress: 172.28.0.97
           Primary: false
-        - PrivateIpAddress: "172.28.0.178"
+        - PrivateIpAddress: 172.28.0.178
           Primary: false
-        - PrivateIpAddress: "172.28.0.163"
+        - PrivateIpAddress: 172.28.0.163
           Primary: false
       SubnetId: !Ref EC2Subnet4
       SourceDestCheck: true
       Tags:
-        - Key: "node.k8s.amazonaws.com/instance_id"
+        - Key: node.k8s.amazonaws.com/instance_id
           Value: !Ref EC2Instance4
-        - Key: "node.k8s.amazonaws.com/createdAt"
+        - Key: node.k8s.amazonaws.com/createdAt
           Value: "2021-03-05T19:54:43Z"
       GroupSet:
         - !Ref EC2SecurityGroup4
         - !Ref EC2SecurityGroup6
-
   EC2NetworkInterfaceAttachment3:
     Type: "AWS::EC2::NetworkInterfaceAttachment"
     Properties:
-      NetworkInterfaceId: "eni-0b2f8bc5770622214"
+      NetworkInterfaceId: eni-0b2f8bc5770622214
       DeviceIndex: 2
       InstanceId: !Ref EC2Instance4
       DeleteOnTermination: true
-
   EC2NetworkInterface8:
     Type: "AWS::EC2::NetworkInterface"
     Properties:
       Description: !Sub "aws-K8S-${EC2Instance3}"
-      PrivateIpAddress: "172.28.0.243"
+      PrivateIpAddress: 172.28.0.243
       PrivateIpAddresses:
-        - PrivateIpAddress: "172.28.0.243"
+        - PrivateIpAddress: 172.28.0.243
           Primary: true
-        - PrivateIpAddress: "172.28.0.214"
+        - PrivateIpAddress: 172.28.0.214
           Primary: false
       SubnetId: !Ref EC2Subnet4
       SourceDestCheck: true
       Tags:
-        - Key: "node.k8s.amazonaws.com/createdAt"
+        - Key: node.k8s.amazonaws.com/createdAt
           Value: "2021-02-16T03:43:41Z"
-        - Key: "node.k8s.amazonaws.com/instance_id"
+        - Key: node.k8s.amazonaws.com/instance_id
           Value: !Ref EC2Instance3
       GroupSet:
         - !Ref EC2SecurityGroup4
         - !Ref EC2SecurityGroup6
-
   EC2NetworkInterfaceAttachment4:
     Type: "AWS::EC2::NetworkInterfaceAttachment"
     Properties:
-      NetworkInterfaceId: "eni-0a301e12381805cf6"
+      NetworkInterfaceId: eni-0a301e12381805cf6
       DeviceIndex: 1
       InstanceId: !Ref EC2Instance3
       DeleteOnTermination: true
-
   EC2NetworkInterface9:
     Type: "AWS::EC2::NetworkInterface"
     Properties:
       Description: !Sub "Amazon EKS ${RDSDBInstance}"
-      PrivateIpAddress: "172.28.0.246"
+      PrivateIpAddress: 172.28.0.246
       PrivateIpAddresses:
-        - PrivateIpAddress: "172.28.0.246"
+        - PrivateIpAddress: 172.28.0.246
           Primary: true
       SubnetId: !Ref EC2Subnet4
       SourceDestCheck: true
@@ -1519,75 +940,70 @@ Resources:
         - !Ref EC2SecurityGroup5
         - !Ref EC2SecurityGroup8
         - !Ref EC2SecurityGroup6
-
   EC2NetworkInterface10:
     Type: "AWS::EC2::NetworkInterface"
     Properties:
       Description: !Sub "aws-K8S-${EC2Instance4}"
-      PrivateIpAddress: "172.28.0.72"
+      PrivateIpAddress: 172.28.0.72
       PrivateIpAddresses:
-        - PrivateIpAddress: "172.28.0.72"
+        - PrivateIpAddress: 172.28.0.72
           Primary: true
-        - PrivateIpAddress: "172.28.0.95"
+        - PrivateIpAddress: 172.28.0.95
           Primary: false
-        - PrivateIpAddress: "172.28.0.120"
+        - PrivateIpAddress: 172.28.0.120
           Primary: false
-        - PrivateIpAddress: "172.28.0.107"
+        - PrivateIpAddress: 172.28.0.107
           Primary: false
-        - PrivateIpAddress: "172.28.0.180"
+        - PrivateIpAddress: 172.28.0.180
           Primary: false
-        - PrivateIpAddress: "172.28.0.98"
+        - PrivateIpAddress: 172.28.0.98
           Primary: false
       SubnetId: !Ref EC2Subnet4
       SourceDestCheck: true
       Tags:
-        - Key: "node.k8s.amazonaws.com/instance_id"
+        - Key: node.k8s.amazonaws.com/instance_id
           Value: !Ref EC2Instance4
-        - Key: "node.k8s.amazonaws.com/createdAt"
+        - Key: node.k8s.amazonaws.com/createdAt
           Value: "2021-03-05T18:40:47Z"
       GroupSet:
         - !Ref EC2SecurityGroup4
         - !Ref EC2SecurityGroup6
-
   EC2NetworkInterfaceAttachment5:
     Type: "AWS::EC2::NetworkInterfaceAttachment"
     Properties:
-      NetworkInterfaceId: "eni-0fee61799a9a6e168"
+      NetworkInterfaceId: eni-0fee61799a9a6e168
       DeviceIndex: 1
       InstanceId: !Ref EC2Instance4
       DeleteOnTermination: true
-
   EC2NetworkInterface11:
     Type: "AWS::EC2::NetworkInterface"
     Properties:
-      Description: "Primary network interface"
+      Description: Primary network interface
       PrivateIpAddress: !GetAtt EC2Instance3.PrivateIp
       PrivateIpAddresses:
         - PrivateIpAddress: !GetAtt EC2Instance3.PrivateIp
           Primary: true
-        - PrivateIpAddress: "172.28.0.190"
+        - PrivateIpAddress: 172.28.0.190
           Primary: false
       SubnetId: !Ref EC2Subnet4
       SourceDestCheck: true
       GroupSet:
         - !Ref EC2SecurityGroup4
         - !Ref EC2SecurityGroup6
-
   EC2NetworkInterfaceAttachment6:
     Type: "AWS::EC2::NetworkInterfaceAttachment"
     Properties:
-      NetworkInterfaceId: "eni-01dde156a2c75e946"
+      NetworkInterfaceId: eni-01dde156a2c75e946
       DeviceIndex: 0
       InstanceId: !Ref EC2Instance3
       DeleteOnTermination: true
-
   EC2NetworkInterface12:
     Type: "AWS::EC2::NetworkInterface"
     Properties:
       Description: !Sub "Amazon EKS ${RDSDBInstance}"
-      PrivateIpAddress: "172.28.2.226"
+      PrivateIpAddress: 172.28.2.226
       PrivateIpAddresses:
-        - PrivateIpAddress: "172.28.2.226"
+        - PrivateIpAddress: 172.28.2.226
           Primary: true
       SubnetId: !Ref EC2Subnet
       SourceDestCheck: true
@@ -1595,270 +1011,70 @@ Resources:
         - !Ref EC2SecurityGroup5
         - !Ref EC2SecurityGroup8
         - !Ref EC2SecurityGroup6
-
   EC2NetworkInterface13:
     Type: "AWS::EC2::NetworkInterface"
     Properties:
-      Description: !Sub "ELB net/${ElasticLoadBalancingV2LoadBalancer.LoadBalancerName}/dba6d1b910464b26"
-      PrivateIpAddress: "172.28.2.227"
+      Description: !Sub >-
+        ELB
+        net/${ElasticLoadBalancingV2LoadBalancer.LoadBalancerName}/dba6d1b910464b26
+      PrivateIpAddress: 172.28.2.227
       PrivateIpAddresses:
-        - PrivateIpAddress: "172.28.2.227"
+        - PrivateIpAddress: 172.28.2.227
           Primary: true
       SubnetId: !Ref EC2Subnet
       SourceDestCheck: false
-
   EC2NetworkInterfacePermission:
     Type: "AWS::EC2::NetworkInterfacePermission"
     Properties:
       AwsAccountId: "249716838874"
-      NetworkInterfaceId: "eni-02645173b775042e4"
-      Permission: "INSTANCE-ATTACH"
-
-  EC2NetworkInterfacePermission2:
-    Type: "AWS::EC2::NetworkInterfacePermission"
-    Properties:
-      AwsAccountId: "249716838874"
-      NetworkInterfaceId: "eni-02c9043a7ca8accbb"
-      Permission: "INSTANCE-ATTACH"
-
-  EC2SecurityGroup:
-    Type: "AWS::EC2::SecurityGroup"
-    Properties:
-      GroupDescription: "ssh-from-vpn DO NOT EDIT (managed by cloudformation) Source: go-ops/products/service-account-management/global/security-groups-generic.cfn"
-      GroupName: "security-groups-vpc-funcxgeneralvpccfn-SshFromVpn-11PI43NKMWUD5"
-      Tags:
-        - Key: "Name"
-          Value: "funcxgeneralvpccfn-ssh-from-vpn-cfn"
-        - Key: "aws:cloudformation:logical-id"
-          Value: "SshFromVpn"
-        - Key: "aws:cloudformation:stack-id"
-          Value: "arn:aws:cloudformation:us-east-1:512084481048:stack/security-groups-vpc-funcxgeneralvpccfn/f1af2870-50ab-11eb-8703-0a046979ecfd"
-        - Key: "template_source"
-          Value: "go-ops/products/service-account-management/global/security-groups-generic.cfn"
-        - Key: "aws:cloudformation:stack-name"
-          Value: "security-groups-vpc-funcxgeneralvpccfn"
-      VpcId: !Ref EC2VPC
-      SecurityGroupIngress:
-        - SourceSecurityGroupId: "sg-b07e6ec4"
-          SourceSecurityGroupOwnerId: "280831789029"
-          FromPort: 22
-          IpProtocol: "tcp"
-          ToPort: 22
-      SecurityGroupEgress:
-        - CidrIp: "0.0.0.0/0"
-          IpProtocol: "-1"
-
-  EC2SecurityGroup2:
-    Type: "AWS::EC2::SecurityGroup"
-    Properties:
-      GroupDescription: "Created by RDS management console"
-      GroupName: "funcx-dev-rds"
-      VpcId: !Ref EC2VPC
-      SecurityGroupIngress:
-        - CidrIp: "99.138.110.177/32"
-          FromPort: 5432
-          IpProtocol: "tcp"
-          ToPort: 5432
-        - SourceSecurityGroupId: !Ref EC2SecurityGroup6
-          SourceSecurityGroupOwnerId: "512084481048"
-          FromPort: 5432
-          IpProtocol: "tcp"
-          ToPort: 5432
-      SecurityGroupEgress:
-        - CidrIp: "0.0.0.0/0"
-          IpProtocol: "-1"
-
+      NetworkInterfaceId: eni-02645173b775042e4
+      Permission: INSTANCE-ATTACH
   EC2SecurityGroup3:
     Type: "AWS::EC2::SecurityGroup"
     Properties:
-      GroupDescription: "ssh"
-      GroupName: "ssh"
+      GroupDescription: ssh
+      GroupName: ssh
       VpcId: !Ref EC2VPC
       SecurityGroupIngress:
-        - CidrIp: "0.0.0.0/0"
+        - CidrIp: 0.0.0.0/0
           Description: ""
           FromPort: 22
-          IpProtocol: "tcp"
+          IpProtocol: tcp
           ToPort: 22
       SecurityGroupEgress:
-        - CidrIp: "0.0.0.0/0"
+        - CidrIp: 0.0.0.0/0
           IpProtocol: "-1"
-
   EC2SecurityGroup4:
     Type: "AWS::EC2::SecurityGroup"
     Properties:
-      GroupDescription: "Security group for all nodes in the nodeGroup to allow SSH access"
-      GroupName: "eks-remoteAccess-60bb799a-7150-ece1-6072-8073e0412042"
+      GroupDescription: Security group for all nodes in the nodeGroup to allow SSH access
+      GroupName: eks-remoteAccess-60bb799a-7150-ece1-6072-8073e0412042
       Tags:
-        - Key: "eks"
-          Value: "funcx-dev-eks-node-group"
+        - Key: eks
+          Value: funcx-dev-eks-node-group
         - Key: "eks:nodegroup-name"
-          Value: "funcx-dev-eks-node-group"
+          Value: funcx-dev-eks-node-group
       VpcId: !Ref EC2VPC
       SecurityGroupIngress:
-        - CidrIp: "0.0.0.0/0"
+        - CidrIp: 0.0.0.0/0
           FromPort: 22
-          IpProtocol: "tcp"
+          IpProtocol: tcp
           ToPort: 22
       SecurityGroupEgress:
-        - CidrIp: "0.0.0.0/0"
+        - CidrIp: 0.0.0.0/0
           IpProtocol: "-1"
-
-  EC2SecurityGroup5:
-    Type: "AWS::EC2::SecurityGroup"
-    Properties:
-      GroupDescription: "full-from-vpn DO NOT EDIT (managed by cloudformation) Source: go-ops/products/service-account-management/global/security-groups-generic.cfn"
-      GroupName: "security-groups-vpc-funcxgeneralvpccfn-FullFromVpn-1W8BB2ZND1QWM"
-      Tags:
-        - Key: "aws:cloudformation:stack-id"
-          Value: "arn:aws:cloudformation:us-east-1:512084481048:stack/security-groups-vpc-funcxgeneralvpccfn/f1af2870-50ab-11eb-8703-0a046979ecfd"
-        - Key: "template_source"
-          Value: "go-ops/products/service-account-management/global/security-groups-generic.cfn"
-        - Key: "aws:cloudformation:stack-name"
-          Value: "security-groups-vpc-funcxgeneralvpccfn"
-        - Key: "Name"
-          Value: "funcxgeneralvpccfn-full-from-vpn-cfn"
-        - Key: "aws:cloudformation:logical-id"
-          Value: "FullFromVpn"
-      VpcId: !Ref EC2VPC
-      SecurityGroupIngress:
-        - SourceSecurityGroupId: "sg-b07e6ec4"
-          SourceSecurityGroupOwnerId: "280831789029"
-          IpProtocol: "-1"
-      SecurityGroupEgress:
-        - CidrIp: "0.0.0.0/0"
-          IpProtocol: "-1"
-
-  EC2SecurityGroup6:
-    Type: "AWS::EC2::SecurityGroup"
-    Properties:
-      GroupDescription: "EKS created security group applied to ENI that is attached to EKS Control Plane master nodes, as well as any managed workloads."
-      GroupName: "eks-cluster-sg-funcx-dev-138676996"
-      Tags:
-        - Key: "kubernetes.io/cluster/funcx-dev"
-          Value: "owned"
-        - Key: "Name"
-          Value: "eks-cluster-sg-funcx-dev-138676996"
-        - Key: "aws:eks:cluster-name"
-          Value: "funcx-dev"
-      VpcId: !Ref EC2VPC
-      SecurityGroupIngress:
-        - CidrIp: "0.0.0.0/0"
-          FromPort: 80
-          IpProtocol: "tcp"
-          ToPort: 80
-        - CidrIp: "0.0.0.0/0"
-          Description: !Sub "kubernetes.io/rule/nlb/client=${ElasticLoadBalancingV2LoadBalancer.LoadBalancerName}"
-          FromPort: 30259
-          IpProtocol: "tcp"
-          ToPort: 30259
-        - CidrIp: "0.0.0.0/0"
-          FromPort: 55000
-          IpProtocol: "tcp"
-          ToPort: 55005
-        - SourceSecurityGroupId: "sg-0cc065cfd8f4953ac"
-          SourceSecurityGroupOwnerId: "512084481048"
-          IpProtocol: "-1"
-        - CidrIp: "0.0.0.0/0"
-          FromPort: 8000
-          IpProtocol: "tcp"
-          ToPort: 8000
-        - CidrIp: "172.28.2.0/24"
-          Description: !Sub "kubernetes.io/rule/nlb/health=${ElasticLoadBalancingV2LoadBalancer.LoadBalancerName}"
-          FromPort: 30253
-          IpProtocol: "tcp"
-          ToPort: 30253
-        - CidrIp: "172.28.0.0/24"
-          Description: !Sub "kubernetes.io/rule/nlb/health=${ElasticLoadBalancingV2LoadBalancer.LoadBalancerName}"
-          FromPort: 30253
-          IpProtocol: "tcp"
-          ToPort: 30253
-        - CidrIp: "0.0.0.0/0"
-          Description: !Sub "kubernetes.io/rule/nlb/client=${ElasticLoadBalancingV2LoadBalancer.LoadBalancerName}"
-          FromPort: 31390
-          IpProtocol: "tcp"
-          ToPort: 31390
-        - CidrIp: "0.0.0.0/0"
-          Description: "kubernetes.io/rule/nlb/mtu"
-          FromPort: 3
-          IpProtocol: "icmp"
-          ToPort: 4
-        - CidrIp: "0.0.0.0/0"
-          FromPort: 443
-          IpProtocol: "tcp"
-          ToPort: 443
-      SecurityGroupEgress:
-        - CidrIp: "0.0.0.0/0"
-          IpProtocol: "-1"
-
-  EC2SecurityGroup7:
-    Type: "AWS::EC2::SecurityGroup"
-    Properties:
-      GroupDescription: "postgresql-from-vpn DO NOT EDIT (managed by cloudformation) Source: go-ops/products/service-account-management/global/security-groups-generic.cfn"
-      GroupName: "security-groups-vpc-funcxgeneralvpccfn-PostgresqlFromVpn-12HOSTVE380CA"
-      Tags:
-        - Key: "aws:cloudformation:stack-name"
-          Value: "security-groups-vpc-funcxgeneralvpccfn"
-        - Key: "Name"
-          Value: "funcxgeneralvpccfn-postgresql-from-vpn-cfn"
-        - Key: "template_source"
-          Value: "go-ops/products/service-account-management/global/security-groups-generic.cfn"
-        - Key: "aws:cloudformation:logical-id"
-          Value: "PostgresqlFromVpn"
-        - Key: "aws:cloudformation:stack-id"
-          Value: "arn:aws:cloudformation:us-east-1:512084481048:stack/security-groups-vpc-funcxgeneralvpccfn/f1af2870-50ab-11eb-8703-0a046979ecfd"
-      VpcId: !Ref EC2VPC
-      SecurityGroupIngress:
-        - SourceSecurityGroupId: "sg-b07e6ec4"
-          SourceSecurityGroupOwnerId: "280831789029"
-          FromPort: !GetAtt RDSDBInstance.Endpoint.Port
-          IpProtocol: "tcp"
-          ToPort: !GetAtt RDSDBInstance.Endpoint.Port
-      SecurityGroupEgress:
-        - CidrIp: "0.0.0.0/0"
-          IpProtocol: "-1"
-
   EC2SecurityGroup8:
     Type: "AWS::EC2::SecurityGroup"
     Properties:
-      GroupDescription: "An SG for funcX EKS nodes"
-      GroupName: "funcx_eks"
+      GroupDescription: An SG for funcX EKS nodes
+      GroupName: funcx_eks
       VpcId: !Ref EC2VPC
       SecurityGroupEgress:
-        - CidrIp: "0.0.0.0/0"
+        - CidrIp: 0.0.0.0/0
           FromPort: 22
-          IpProtocol: "tcp"
+          IpProtocol: tcp
           ToPort: 22
-        - CidrIp: "0.0.0.0/0"
+        - CidrIp: 0.0.0.0/0
           FromPort: 55001
-          IpProtocol: "tcp"
+          IpProtocol: tcp
           ToPort: 55005
-
-  EC2FlowLog:
-    Type: "AWS::EC2::FlowLog"
-    Properties:
-      DeliverLogsPermissionArn: !GetAtt IAMRole11.Arn
-      LogGroupName: "vpc-flow-logs"
-      ResourceId: !Ref EC2VPC
-      TrafficType: "ALL"
-      LogDestinationType: "cloud-watch-logs"
-      ResourceType: "VPC"
-      LogFormat: "${version} ${account-id} ${interface-id} ${srcaddr} ${dstaddr} ${srcport} ${dstport} ${protocol} ${packets} ${bytes} ${start} ${end} ${action} ${log-status}"
-      MaxAggregationInterval: 600
-
-  EC2NatGateway:
-    Type: "AWS::EC2::NatGateway"
-    Properties:
-      SubnetId: !Ref EC2Subnet4
-      Tags:
-        - Key: "aws:cloudformation:stack-name"
-          Value: "vpc-funcx"
-        - Key: "aws:cloudformation:logical-id"
-          Value: "NatGateway"
-        - Key: "aws:cloudformation:stack-id"
-          Value: "arn:aws:cloudformation:us-east-1:512084481048:stack/vpc-funcx/22b92c60-5087-11eb-a957-0e9b76727ea5"
-        - Key: "template_source"
-          Value: "UNSPECIFIED"
-        - Key: "Name"
-          Value: "NAT-gateway-cfn"
-      AllocationId: !GetAtt EC2EIP.AllocationId
