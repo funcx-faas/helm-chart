@@ -1,0 +1,44 @@
+apiVersion: eksctl.io/v1alpha5
+kind: ClusterConfig
+
+metadata:
+  name: funcx-prod
+  region: us-east-1
+
+cloudWatch:
+  clusterLogging:
+    # enable specific types of cluster control plane logs
+    enableTypes: ["all"]
+
+vpc:
+  id: vpc-0d3b9f7c3a9c6c1ba
+  subnets:
+    public:
+      us-east-1a: 
+        id: subnet-0c0d6b32bb57c39b2
+      us-east-1b: 
+        id: subnet-0906da1c44cbe3b8d
+    private:
+      us-east-1a: 
+        id: subnet-0e79de4daf8cf321f
+      us-east-1b: 
+        id: subnet-0d10f5ed0f8099b91
+
+nodeGroups:
+  - name: funcx-prod-node-group
+    instanceType: t3.medium
+    desiredCapacity: 1
+    volumeSize: 20
+    ssh:
+      publicKeyName: funcx-eks
+      enableSsm: true
+    availabilityZones:
+      - us-east-1a
+      - us-east-1b
+    iam:
+      withAddonPolicies:
+        autoScaler: true
+        externalDNS: true
+        certManager: true
+        albIngress: true
+        cloudWatch: true
