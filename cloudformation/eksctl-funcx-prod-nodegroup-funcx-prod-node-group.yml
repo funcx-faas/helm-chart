@@ -1,0 +1,437 @@
+StagesAvailable:
+- Original
+- Processed
+TemplateBody:
+  AWSTemplateFormatVersion: '2010-09-09'
+  Description: 'EKS nodes (AMI family: AmazonLinux2, SSH access: true, private networking:
+    false) [created and managed by eksctl]'
+  Mappings:
+    ServicePrincipalPartitionMap:
+      aws:
+        EC2: ec2.amazonaws.com
+        EKS: eks.amazonaws.com
+        EKSFargatePods: eks-fargate-pods.amazonaws.com
+      aws-cn:
+        EC2: ec2.amazonaws.com.cn
+        EKS: eks.amazonaws.com
+        EKSFargatePods: eks-fargate-pods.amazonaws.com
+      aws-us-gov:
+        EC2: ec2.amazonaws.com
+        EKS: eks.amazonaws.com
+        EKSFargatePods: eks-fargate-pods.amazonaws.com
+  Outputs:
+    FeatureLocalSecurityGroup:
+      Value: true
+    FeaturePrivateNetworking:
+      Value: false
+    FeatureSharedSecurityGroup:
+      Value: true
+    InstanceProfileARN:
+      Export:
+        Name:
+          Fn::Sub: ${AWS::StackName}::InstanceProfileARN
+      Value:
+        Fn::GetAtt:
+        - NodeInstanceProfile
+        - Arn
+    InstanceRoleARN:
+      Export:
+        Name:
+          Fn::Sub: ${AWS::StackName}::InstanceRoleARN
+      Value:
+        Fn::GetAtt:
+        - NodeInstanceRole
+        - Arn
+  Resources:
+    EgressInterCluster:
+      Properties:
+        Description: Allow control plane to communicate with worker nodes in group
+          funcx-prod-node-group (kubelet and workload TCP ports)
+        DestinationSecurityGroupId:
+          Ref: SG
+        FromPort: 1025
+        GroupId:
+          Fn::ImportValue: eksctl-funcx-prod-cluster::SecurityGroup
+        IpProtocol: tcp
+        ToPort: 65535
+      Type: AWS::EC2::SecurityGroupEgress
+    EgressInterClusterAPI:
+      Properties:
+        Description: Allow control plane to communicate with worker nodes in group
+          funcx-prod-node-group (workloads using HTTPS port, commonly used with extension
+          API servers)
+        DestinationSecurityGroupId:
+          Ref: SG
+        FromPort: 443
+        GroupId:
+          Fn::ImportValue: eksctl-funcx-prod-cluster::SecurityGroup
+        IpProtocol: tcp
+        ToPort: 443
+      Type: AWS::EC2::SecurityGroupEgress
+    IngressInterClusterCP:
+      Properties:
+        Description: Allow control plane to receive API requests from worker nodes
+          in group funcx-prod-node-group
+        FromPort: 443
+        GroupId:
+          Fn::ImportValue: eksctl-funcx-prod-cluster::SecurityGroup
+        IpProtocol: tcp
+        SourceSecurityGroupId:
+          Ref: SG
+        ToPort: 443
+      Type: AWS::EC2::SecurityGroupIngress
+    NodeGroup:
+      Properties:
+        DesiredCapacity: '1'
+        LaunchTemplate:
+          LaunchTemplateName:
+            Fn::Sub: ${AWS::StackName}
+          Version:
+            Fn::GetAtt:
+            - NodeGroupLaunchTemplate
+            - LatestVersionNumber
+        MaxSize: '1'
+        MinSize: '1'
+        Tags:
+        - Key: Name
+          PropagateAtLaunch: 'true'
+          Value: funcx-prod-funcx-prod-node-group-Node
+        - Key: kubernetes.io/cluster/funcx-prod
+          PropagateAtLaunch: 'true'
+          Value: owned
+        - Key: k8s.io/cluster-autoscaler/enabled
+          PropagateAtLaunch: 'true'
+          Value: 'true'
+        - Key: k8s.io/cluster-autoscaler/funcx-prod
+          PropagateAtLaunch: 'true'
+          Value: owned
+        VPCZoneIdentifier:
+        - subnet-0c0d6b32bb57c39b2
+        - subnet-0906da1c44cbe3b8d
+      Type: AWS::AutoScaling::AutoScalingGroup
+      UpdatePolicy:
+        AutoScalingRollingUpdate: {}
+    NodeGroupLaunchTemplate:
+      Properties:
+        LaunchTemplateData:
+          BlockDeviceMappings:
+          - DeviceName: /dev/xvda
+            Ebs:
+              Encrypted: false
+              Iops: 3000
+              Throughput: 125
+              VolumeSize: 20
+              VolumeType: gp3
+          IamInstanceProfile:
+            Arn:
+              Fn::GetAtt:
+              - NodeInstanceProfile
+              - Arn
+          ImageId: ami-0b8e294a936b2bcce
+          InstanceType: t3.medium
+          KeyName: funcx-eks
+          MetadataOptions:
+            HttpPutResponseHopLimit: 2
+            HttpTokens: optional
+          NetworkInterfaces:
+          - DeviceIndex: 0
+            Groups:
+            - Fn::ImportValue: eksctl-funcx-prod-cluster::SharedNodeSecurityGroup
+            - Ref: SG
+            NetworkCardIndex: 0
+          UserData: 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
+        LaunchTemplateName:
+          Fn::Sub: ${AWS::StackName}
+      Type: AWS::EC2::LaunchTemplate
+    NodeInstanceProfile:
+      Properties:
+        Path: /
+        Roles:
+        - Ref: NodeInstanceRole
+      Type: AWS::IAM::InstanceProfile
+    NodeInstanceRole:
+      Properties:
+        AssumeRolePolicyDocument:
+          Statement:
+          - Action:
+            - sts:AssumeRole
+            Effect: Allow
+            Principal:
+              Service:
+              - Fn::FindInMap:
+                - ServicePrincipalPartitionMap
+                - Ref: AWS::Partition
+                - EC2
+          Version: '2012-10-17'
+        ManagedPolicyArns:
+        - Fn::Sub: arn:${AWS::Partition}:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly
+        - Fn::Sub: arn:${AWS::Partition}:iam::aws:policy/AmazonEKSWorkerNodePolicy
+        - Fn::Sub: arn:${AWS::Partition}:iam::aws:policy/AmazonSSMManagedInstanceCore
+        - Fn::Sub: arn:${AWS::Partition}:iam::aws:policy/CloudWatchAgentServerPolicy
+        Path: /
+        Tags:
+        - Key: Name
+          Value:
+            Fn::Sub: ${AWS::StackName}/NodeInstanceRole
+      Type: AWS::IAM::Role
+    PolicyAWSLoadBalancerController:
+      Properties:
+        PolicyDocument:
+          Statement:
+          - Action:
+            - ec2:CreateTags
+            Condition:
+              'Null':
+                aws:RequestTag/elbv2.k8s.aws/cluster: 'false'
+              StringEquals:
+                ec2:CreateAction: CreateSecurityGroup
+            Effect: Allow
+            Resource:
+              Fn::Sub: arn:${AWS::Partition}:ec2:*:*:security-group/*
+          - Action:
+            - ec2:CreateTags
+            - ec2:DeleteTags
+            Condition:
+              'Null':
+                aws:RequestTag/elbv2.k8s.aws/cluster: 'true'
+                aws:ResourceTag/elbv2.k8s.aws/cluster: 'false'
+            Effect: Allow
+            Resource:
+              Fn::Sub: arn:${AWS::Partition}:ec2:*:*:security-group/*
+          - Action:
+            - elasticloadbalancing:CreateLoadBalancer
+            - elasticloadbalancing:CreateTargetGroup
+            Condition:
+              'Null':
+                aws:RequestTag/elbv2.k8s.aws/cluster: 'false'
+            Effect: Allow
+            Resource: '*'
+          - Action:
+            - elasticloadbalancing:AddTags
+            - elasticloadbalancing:RemoveTags
+            Condition:
+              'Null':
+                aws:RequestTag/elbv2.k8s.aws/cluster: 'true'
+                aws:ResourceTag/elbv2.k8s.aws/cluster: 'false'
+            Effect: Allow
+            Resource:
+            - Fn::Sub: arn:${AWS::Partition}:elasticloadbalancing:*:*:targetgroup/*/*
+            - Fn::Sub: arn:${AWS::Partition}:elasticloadbalancing:*:*:loadbalancer/net/*/*
+            - Fn::Sub: arn:${AWS::Partition}:elasticloadbalancing:*:*:loadbalancer/app/*/*
+          - Action:
+            - ec2:AuthorizeSecurityGroupIngress
+            - ec2:RevokeSecurityGroupIngress
+            - ec2:DeleteSecurityGroup
+            - elasticloadbalancing:ModifyLoadBalancerAttributes
+            - elasticloadbalancing:SetIpAddressType
+            - elasticloadbalancing:SetSecurityGroups
+            - elasticloadbalancing:SetSubnets
+            - elasticloadbalancing:DeleteLoadBalancer
+            - elasticloadbalancing:ModifyTargetGroup
+            - elasticloadbalancing:ModifyTargetGroupAttributes
+            - elasticloadbalancing:DeleteTargetGroup
+            Condition:
+              'Null':
+                aws:ResourceTag/elbv2.k8s.aws/cluster: 'false'
+            Effect: Allow
+            Resource: '*'
+          - Action:
+            - elasticloadbalancing:RegisterTargets
+            - elasticloadbalancing:DeregisterTargets
+            Effect: Allow
+            Resource:
+              Fn::Sub: arn:${AWS::Partition}:elasticloadbalancing:*:*:targetgroup/*/*
+          - Action:
+            - iam:CreateServiceLinkedRole
+            - ec2:DescribeAccountAttributes
+            - ec2:DescribeAddresses
+            - ec2:DescribeInternetGateways
+            - ec2:DescribeVpcs
+            - ec2:DescribeSubnets
+            - ec2:DescribeSecurityGroups
+            - ec2:DescribeInstances
+            - ec2:DescribeNetworkInterfaces
+            - ec2:DescribeTags
+            - elasticloadbalancing:DescribeLoadBalancers
+            - elasticloadbalancing:DescribeLoadBalancerAttributes
+            - elasticloadbalancing:DescribeListeners
+            - elasticloadbalancing:DescribeListenerCertificates
+            - elasticloadbalancing:DescribeSSLPolicies
+            - elasticloadbalancing:DescribeRules
+            - elasticloadbalancing:DescribeTargetGroups
+            - elasticloadbalancing:DescribeTargetGroupAttributes
+            - elasticloadbalancing:DescribeTargetHealth
+            - elasticloadbalancing:DescribeTags
+            - cognito-idp:DescribeUserPoolClient
+            - acm:ListCertificates
+            - acm:DescribeCertificate
+            - iam:ListServerCertificates
+            - iam:GetServerCertificate
+            - waf-regional:GetWebACL
+            - waf-regional:GetWebACLForResource
+            - waf-regional:AssociateWebACL
+            - waf-regional:DisassociateWebACL
+            - wafv2:GetWebACL
+            - wafv2:GetWebACLForResource
+            - wafv2:AssociateWebACL
+            - wafv2:DisassociateWebACL
+            - shield:GetSubscriptionState
+            - shield:DescribeProtection
+            - shield:CreateProtection
+            - shield:DeleteProtection
+            - ec2:AuthorizeSecurityGroupIngress
+            - ec2:RevokeSecurityGroupIngress
+            - ec2:CreateSecurityGroup
+            - elasticloadbalancing:CreateListener
+            - elasticloadbalancing:DeleteListener
+            - elasticloadbalancing:CreateRule
+            - elasticloadbalancing:DeleteRule
+            - elasticloadbalancing:SetWebAcl
+            - elasticloadbalancing:ModifyListener
+            - elasticloadbalancing:AddListenerCertificates
+            - elasticloadbalancing:RemoveListenerCertificates
+            - elasticloadbalancing:ModifyRule
+            Effect: Allow
+            Resource: '*'
+          Version: '2012-10-17'
+        PolicyName:
+          Fn::Sub: ${AWS::StackName}-PolicyAWSLoadBalancerController
+        Roles:
+        - Ref: NodeInstanceRole
+      Type: AWS::IAM::Policy
+    PolicyAutoScaling:
+      Properties:
+        PolicyDocument:
+          Statement:
+          - Action:
+            - autoscaling:DescribeAutoScalingGroups
+            - autoscaling:DescribeAutoScalingInstances
+            - autoscaling:DescribeLaunchConfigurations
+            - autoscaling:DescribeTags
+            - autoscaling:SetDesiredCapacity
+            - autoscaling:TerminateInstanceInAutoScalingGroup
+            - ec2:DescribeLaunchTemplateVersions
+            Effect: Allow
+            Resource: '*'
+          Version: '2012-10-17'
+        PolicyName:
+          Fn::Sub: ${AWS::StackName}-PolicyAutoScaling
+        Roles:
+        - Ref: NodeInstanceRole
+      Type: AWS::IAM::Policy
+    PolicyCertManagerChangeSet:
+      Properties:
+        PolicyDocument:
+          Statement:
+          - Action:
+            - route53:ChangeResourceRecordSets
+            Effect: Allow
+            Resource:
+              Fn::Sub: arn:${AWS::Partition}:route53:::hostedzone/*
+          Version: '2012-10-17'
+        PolicyName:
+          Fn::Sub: ${AWS::StackName}-PolicyCertManagerChangeSet
+        Roles:
+        - Ref: NodeInstanceRole
+      Type: AWS::IAM::Policy
+    PolicyCertManagerGetChange:
+      Properties:
+        PolicyDocument:
+          Statement:
+          - Action:
+            - route53:GetChange
+            Effect: Allow
+            Resource:
+              Fn::Sub: arn:${AWS::Partition}:route53:::change/*
+          Version: '2012-10-17'
+        PolicyName:
+          Fn::Sub: ${AWS::StackName}-PolicyCertManagerGetChange
+        Roles:
+        - Ref: NodeInstanceRole
+      Type: AWS::IAM::Policy
+    PolicyCertManagerHostedZones:
+      Properties:
+        PolicyDocument:
+          Statement:
+          - Action:
+            - route53:ListResourceRecordSets
+            - route53:ListHostedZonesByName
+            Effect: Allow
+            Resource: '*'
+          Version: '2012-10-17'
+        PolicyName:
+          Fn::Sub: ${AWS::StackName}-PolicyCertManagerHostedZones
+        Roles:
+        - Ref: NodeInstanceRole
+      Type: AWS::IAM::Policy
+    PolicyExternalDNSChangeSet:
+      Properties:
+        PolicyDocument:
+          Statement:
+          - Action:
+            - route53:ChangeResourceRecordSets
+            Effect: Allow
+            Resource:
+              Fn::Sub: arn:${AWS::Partition}:route53:::hostedzone/*
+          Version: '2012-10-17'
+        PolicyName:
+          Fn::Sub: ${AWS::StackName}-PolicyExternalDNSChangeSet
+        Roles:
+        - Ref: NodeInstanceRole
+      Type: AWS::IAM::Policy
+    PolicyExternalDNSHostedZones:
+      Properties:
+        PolicyDocument:
+          Statement:
+          - Action:
+            - route53:ListHostedZones
+            - route53:ListResourceRecordSets
+            - route53:ListTagsForResource
+            Effect: Allow
+            Resource: '*'
+          Version: '2012-10-17'
+        PolicyName:
+          Fn::Sub: ${AWS::StackName}-PolicyExternalDNSHostedZones
+        Roles:
+        - Ref: NodeInstanceRole
+      Type: AWS::IAM::Policy
+    SG:
+      Properties:
+        GroupDescription: Communication between the control plane and worker nodes
+          in group funcx-prod-node-group
+        SecurityGroupIngress:
+        - Description: '[IngressInterCluster] Allow worker nodes in group funcx-prod-node-group
+            to communicate with control plane (kubelet and workload TCP ports)'
+          FromPort: 1025
+          IpProtocol: tcp
+          SourceSecurityGroupId:
+            Fn::ImportValue: eksctl-funcx-prod-cluster::SecurityGroup
+          ToPort: 65535
+        - Description: '[IngressInterClusterAPI] Allow worker nodes in group funcx-prod-node-group
+            to communicate with control plane (workloads using HTTPS port, commonly
+            used with extension API servers)'
+          FromPort: 443
+          IpProtocol: tcp
+          SourceSecurityGroupId:
+            Fn::ImportValue: eksctl-funcx-prod-cluster::SecurityGroup
+          ToPort: 443
+        - CidrIp: 0.0.0.0/0
+          Description: Allow SSH access to worker nodes in group funcx-prod-node-group
+          FromPort: 22
+          IpProtocol: tcp
+          ToPort: 22
+        - CidrIpv6: ::/0
+          Description: Allow SSH access to worker nodes in group funcx-prod-node-group
+          FromPort: 22
+          IpProtocol: tcp
+          ToPort: 22
+        Tags:
+        - Key: kubernetes.io/cluster/funcx-prod
+          Value: owned
+        - Key: Name
+          Value:
+            Fn::Sub: ${AWS::StackName}/SG
+        VpcId:
+          Fn::ImportValue: eksctl-funcx-prod-cluster::VPC
+      Type: AWS::EC2::SecurityGroup
+
