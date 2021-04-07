@@ -6,7 +6,7 @@ ingress:
 
 webService:
   image: funcx/web-service
-  tag: dev
+  tag: main
   pullPolicy: IfNotPresent
 
   dbSetupImage: funcx/web-service-db
@@ -24,13 +24,13 @@ endpoint:
   enabled: true
 
 funcx_endpoint:
-  tag: dev
+  tag: main
   funcXServiceAddress: http://funcx-funcx-web-service:8000
 
 forwarder:
   enabled: true
   image: funcx/forwarder
-  tag: forwarder_redesign
+  tag: main
   pullPolicy: IfNotPresent
   tasksPort: 55001
   resultsPort: 55002
