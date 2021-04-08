@@ -26,6 +26,7 @@ endpoint:
 funcx_endpoint:
   tag: main
   funcXServiceAddress: http://funcx-funcx-web-service:8000
+  pullPolicy: Always
 
 forwarder:
   enabled: true

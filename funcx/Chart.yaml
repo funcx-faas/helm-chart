@@ -18,7 +18,7 @@ dependencies:
     repository: https://charts.bitnami.com/bitnami
     condition: services.redis.enabled
   - name: funcx_endpoint
-    version: 0.1.0
+    version: 0.2.0
     repository: http://funcx.org/funcx-helm-charts
     condition: endpoint.enabled
 
