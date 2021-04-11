@@ -21,10 +21,6 @@ spec:
           value: "{{ .Release.Name }}-redis-master"
         - name: REDIS_PORT
           value: "6379"
-        - name: GLOBUS_CLIENT
-          value: "{{ .Values.webService.globusClient }}"
-        - name: GLOBUS_KEY
-          value: "{{ .Values.webService.globusKey }}"
 
         ports:
           - containerPort: 6000

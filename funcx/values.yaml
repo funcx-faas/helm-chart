@@ -45,6 +45,8 @@ services:
     enabled: true
     externalHost:
     externalPort: 6379
+  rabbitmq:
+    enabled: true
 
 postgresql:
   postgresqlUsername: funcx
@@ -62,6 +64,13 @@ redis:
   slave:
     persistence:
       enabled: false
+
+rabbitmq:
+  auth:
+    username: funcx
+    password: rabbitmq
+  persistence:
+    enabled: false
 
 ws:
   image: loonride/funcx_ws
