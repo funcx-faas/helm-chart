@@ -7,154 +7,36 @@ Helm Chart for Deploying funcX stack
 
 This application includes:
 * FuncX Web-Service
-* Kuberentes endpoint
+* FuncX Forwarder
+* FuncX Endpoint (optional)
 * Postgres database
 * Redis Shared Data Structure
-
-> :warning: **THIS IS A TEST DEPLOYMENT**: The web-service and forwarder can be deployed, while the funcx-endpoint is not yet properly supported
-
-## Preliminaries
-The following dependencies must be set up before you can deploy the helm chart:
 
 ## FuncX Endpoint
 
 There are two modes in which funcx-endpoints could be deployed:
 
 1. funcx-endpoint deployed outside k8s, connecting to hosted services in k8s
-2. funcx-endpoint deployed with k8s (broken currently)
+2. funcx-endpoint deployed within k8s
 
-### Deploying funcx-endpoint externally
+# Deploying funcx-endpoint externally
+The following steps setup a local deployment of funcx stack. We can then launch an endpoint against the stack, and launch an sdk to submit tasks to the endpoint.
 
-Install from the `forwarder_rearch_1` branch of the [funcx repo](https://github.com/funcx-faas/funcX)
-Here are the steps to install, preferably to your active conda environment:
-
-```shell script
-git clone https://github.com/funcx-faas/funcX.git
-cd funcX
-git checkout forwarder_rearch_1
-pip install funcx_sdk
-pip install funcx_endpoint
-```
-
-Next create an endpoint configuration:
-
-```shell script
-funcx-endpoint
-```
-
-Update the configuration file to point the endpoint to locally deployed services, which we will setup in the next sections.
-
-    ```python
-    config = Config(
-    executors=[HighThroughputExecutor(
-        provider=LocalProvider(
-            init_blocks=1,
-            min_blocks=0,
-            max_blocks=1,
-        ),
-    )],
-    funcx_service_address="http://127.0.0.1:5000/api/v1", # <--- UPDATE THIS LINE
-)
-
-     ```
-### Deploying funcx-endpoint into the k8s deployment
-
-> :warning: **THIS IS BROKEN AT THE MOMENT**
-
-We can deploy the kubernetes endpoint as a pod as part of the chart. It
-needs to have a valid copy of the funcx's `funcx_sdk_tokens.json` which can
-be created by running on your local workstation and running
-```shell script
- funcx-endpoint start
-```
-
-You will be prompted to follow the authorization link and paste the resulting
-token into the console. Once you do that, funcx-endpoint will create a
-`~/.funcx` directory and provide you with a token file.
-
-The Kubernetes endpoint expects this file to be available as a Kubernetes
-secret named `funcx-sdk-tokens`.
-
-You can install this secret with:
-```shell script
-pushd ~/.funcx
-kubectl create secret generic funcx-sdk-tokens --from-file=credentials/funcx_sdk_tokens.json
-popd
-```
-
-
-> :warning: *Only for debugging*: You can set the forwarder curve server key manually by creating
-  a public/secret curve pair, registering them with kubernetes as a secret and then specifying
-  `forwarder.server_cert = true`. By default the forwarder auto generates keys, and distributes it
-  to the endpoint during registration.
-
-To manually setup the keys for debugging, here are the steps:
-
-1. Create your cureve server public/secret keypair with the create_certs.py script:
-
-    ```shell script
-    # CD into the funcx-forwarder repo
-    python3 test/create_certs.py -d .curve
-    ```
-
-2. Similar to the `funcx-sdk-tokens` add the public/secret pair as kubernetes secret:`funcx-forwarder-secrets` for the forwarder service.
-```shell script
-# Make sure the server.key_secret file is in your $PWD/.curve dir
-kubectl create secret generic funcx-forwarder-secrets --from-file=.curve/server.key --from-file=.curve/server.key_secret
-```
-
-3. Once the endpoint is registered to the newly deployed `funcx-forwarder`, make sure to check the `~/.funcx/<ENDPOINT_NAME>/certificates/server.key` file to confirm that the manually added key has been returned to the endpoint.
-
-### Forwarder
-The forwarder needs to be able to open and manage arbitrary ports which is
-not compatible with some of Kubernetes requirements. For now we will run it
-as a docker container, but outside of the cluster.
-
-Launch a copy of forwarder outside of kubernetes, listening on port 8080:
-    ```shell script
-     docker run --rm -it -p 8080:3031 funcx/forwarder:213_helm_chart
-    ```
-
-## How to Install FuncX
-1. Make a clone of this repository
-2. Download subcharts:
-    ```shell script
-     helm dependency update funcx
-    ```
-3. Create your own `values.yaml` inside the Git ignored directory `deployed_values/`
-4. Obtain Globus Client ID and Secret. Paste them into your values.yaml as
-    ```yaml
-    webService:
-      globusClient: <<your app client>>
-      globusKey: <<your app secret>>
-    ```
-5. Install the helm chart:
-    ```shell script
-    helm install -f deployed_values/values.yaml funcx funcx
-    ```
-6. You can access your web service through the ingres or via a port forward
-to the web service pod. Instructions are provided in the displayed notes.
-
-7. You should be able to see the endpoint registering with the web service
-in their respective logs, along with the forwarder log
-
-## Database Setup
-Until we migrate the webservice to use an ORM, we need to set the database
-schema up using a SQL script. This is accomplished by an init-container that
-is run prior to starting up the web service container. This setup image checks
-to see if the tables are there. If not, it runs the setup script.
-
-## Values
-
-> :warning: **USE THE FOLLOWING dev_values.yaml**
-
+## Deploy helm-chart
+1. Make sure minikube is installed on your local box.
+2. We need to make sure minikube is turned on. Use `minikube status` to check that. If not, we can turn it on by `minikube start`.
+3. Create a directory within this `helm-chart` directory. In this example, let us call the newly created directory `deployed_values`.
+4. Create a `.yaml` file within the `deployed_values` directory. In this example, let us call the `.yaml` file `dev_values.yaml`.
+5. Use the following as a template for `dev_values.yaml`. All the parameters as shown below are tested working.
+We need to obtain the `globusClient` and `globusKey` and replace them in the template.
 ``` yaml
 webService:
+  image: funcx/web-service
   pullPolicy: Always
   host: http://localhost:5000
   globusClient: <GLOBUS_CLIENT_ID_STRING>
   globusKey: <GLOBUS_CLIENT_KEY_STRING>
-  tag: forwarder_rearch_update
+  tag: main
 
 endpoint:
   enabled: false
@@ -164,9 +46,9 @@ funcx_endpoint:
 
 forwarder:
   enabled: true
-  tag: forwarder_redesign
+  tag: main
   pullPolicy: Always
-  local_image: funcx-forwarder-dev1:latest
+  image: funcx/forwarder
 
 redis:
   master:
@@ -178,8 +60,169 @@ postgresql:
     nodePort: 30432
     type: NodePort
 ```
-There are a few values that can be set to adjust the deployed system
-configuration
+6. We can now deploy the funcx stack locally by `helm install -f deployed_values/dev_values.yaml funcx ./funcx`.
+7. We may need to wait for a minute or two for all the applications to be fully deployed. We can check the deployment status by
+`kubectl get pods --namespace default`
+8. We need to follow the notes generated by the installation command, to assign proxy for the web service running in the cluster.
+`export POD_NAME=$(kubectl get pods --namespace default -l "app=funcx-funcx-web-service" -o jsonpath="{.items[0].metadata.name}")`
+`kubectl port-forward $POD_NAME 5000:5000`
+9. We can test the deployment by entering `http://127.0.0.1:5000/api/v1/version` in a browser. At the same time, we should be able to notice on-screen printout of `Handling connection for 5000`.
+10. Now we can start a funcx endpoint against the local deployed the funcx stack.
+
+## Start an endpoint
+0. Install FuncX if not yet.
+``` shell
+git clone https://github.com/funcx-faas/funcX.git
+cd funcX
+git checkout main
+pip install ./funcx_sdk
+pip install ./funcx_endpoint
+```
+1. In a new console, run `funcx-endpoint configure local-helm` for a new endpoint configuration.
+2. In `~/.funcx/local-helm` locate the `config.py` file.
+3. We need to change `funcx_service_address` in the file to
+`funcx_service_address="http://127.0.0.1:5000/api/v1`
+4. Then we can launch an endpoint by `funcx-endpoint start local-helm`
+5. We need the endpoint uuid for the following steps.
+
+## Submit function from an sdk to the endpoint
+1. Use the following code to create a `.py` file. In this example, let us name it `test_local.py`.
+``` python
+from funcx.sdk.client import FuncXClient
+import time
+
+def hello_world():
+    return "Hello World!"
+
+fxc = FuncXClient(funcx_service_address="http://127.0.0.1:5000/api/v1")
+
+func_uuid = fxc.register_function(hello_world)
+print(func_uuid)
+
+local_endpoint = <THE ENDPOINT UUID FROM THE PREVIOUS STEP>
+res = fxc.run(endpoint_id=local_endpoint, function_id=func_uuid)
+print(res)
+
+time.sleep(5)
+
+print(fxc.get_result(res))
+```
+2. By running `python test_local.py`, we should expect on-screen printout of `Hello World!`, along with the uuids.
+
+## Clean up
+1. We should stop the endpoint by `funcx-endpoint stop local-helm`
+2. We can stop the port proxy by Ctrl+c, and stop the cluster by `helm uninstall funcx`
+3. We can stop the minikube by `minikube stop`.
+
+# Deploying funcx-endpoint internally
+The following steps setup a local deployment of funcx stack, including endpoint.
+
+## Deploy helm-chart
+1. Make sure minikube is installed on your local box.
+2. We need to make sure minikube is turned on. Use `minikube status` to check that. If not, we can turn it on by `minikube start`.
+3. We want to use `helm dependency update` for the latest charts.
+4. Create a directory within this `helm-chart` directory. In this example, let us call the newly created directory `deployed_values`.
+5. Create a `.yaml` file within the `deployed_values` directory. In this example, let us call the `.yaml` file `dev_values.yaml`.
+6. Use the following as a template for `dev_values.yaml`. All the parameters as shown below are tested working.
+We need to obtain the `globusClient` and `globusKey` and replace them in the template.
+``` yaml
+webService:
+  image: funcx/web-service
+  pullPolicy: Always
+  host: http://localhost:5000
+  globusClient: <GLOBUS_CLIENT_ID_STRING>
+  globusKey: <GLOBUS_CLIENT_KEY_STRING>
+  tag: main
+
+endpoint:
+  enabled: true
+
+funcx_endpoint:
+  funcXServiceAddress: http://funcx-funcx-web-service:8000/
+  image:
+    repository: funcx/kube-endpoint
+    tag: main
+    pullPolicy: Always
+
+  workerImage: python:3.7-buster
+  workerInit: pip install --force-reinstall git+https://github.com/funcx-faas/funcX.git#subdirectory=funcx_endpoint;pip install --force-reinstall git+https://github.com/funcx-faas/funcX.git#subdirectory=funcx_sdk
+  workerNamespace: default
+  logDir: /tmp/worker_logs
+
+  rbacEnabled: true
+  nameOverride: funcx-endpoint
+
+  initMem: 2000Mi
+  maxMem: 16000Mi
+  initCPU: 1
+  maxCPU: 2
+
+  initBlocks: 0
+  minBlocks: 1
+  maxBlocks: 100
+  maxWorkersPerPod: 1
+
+  detachEndpoint: true
+
+  endpointUUID: d2d612a2-cda9-42aa-a766-1a5657b0a5e7
+
+forwarder:
+  enabled: true
+  tag: main
+  pullPolicy: Always
+  image: funcx/forwarder
+
+redis:
+  master:
+    service:
+      nodePort: 30379
+      type: NodePort
+postgresql:
+  service:
+    nodePort: 30432
+    type: NodePort
+```
+Note: endpointUUID cannot be a random string. It needs to satisfy UUID requirement.
+7. We can now deploy the funcx stack locally by `helm install -f deployed_values/dev_values.yaml funcx ./funcx`.
+8. We may need to wait for a minute or two for all the applications to be fully deployed. We can check the deployment status by
+`kubectl get pods --namespace default`
+9. We need to follow the notes generated by the installation command, to assign proxy for the web service running in the cluster.
+`export POD_NAME=$(kubectl get pods --namespace default -l "app=funcx-funcx-web-service" -o jsonpath="{.items[0].metadata.name}")`
+`kubectl port-forward $POD_NAME 5000:5000`
+10. We can test the deployment by entering `http://127.0.0.1:5000/api/v1/version` in a browser. At the same time, we should be able to notice on-screen printout of `Handling connection for 5000`.
+11. Now we can submit a function to the internally deployed endpoint.
+
+## Submit function from an sdk to the endpoint
+1. Use the following code to create a `.py` file. In this example, let us name it `test_local.py`.
+``` python
+from funcx.sdk.client import FuncXClient
+import time
+
+def hello_world():
+    return "Hello World!"
+
+fxc = FuncXClient(funcx_service_address="http://127.0.0.1:5000/api/v1")
+
+func_uuid = fxc.register_function(hello_world)
+print(func_uuid)
+
+local_endpoint = 'd2d612a2-cda9-42aa-a766-1a5657b0a5e7'
+res = fxc.run(endpoint_id=local_endpoint, function_id=func_uuid)
+print(res)
+
+time.sleep(120)
+
+print(fxc.get_result(res))
+```
+Note: The endpoint UUID we are using here is the one used in the deployment yaml file. We want to give it a 120-second wait time, for the overhead of manager pod creation. After running the script for the first time, the wait time can be reduced to a couple of seconds.
+2. By running `python test_local.py`, we should expect on-screen printout of `Hello World!`, along with the uuids.
+
+## Clean up
+1. We can stop the port proxy by Ctrl+c, and stop the cluster by `helm uninstall funcx`
+2. We may also want to use `kubectl delete pods` to manually clean up created manager pod.
+3. We can stop the minikube by `minikube stop`.
+
+There are a few values that can be set to adjust the deployed system configuration
 
 | Value                          | Desciption                                                          | Default           |
 | ------------------------------ | ------------------------------------------------------------------- | ----------------- |
