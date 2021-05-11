@@ -186,9 +186,7 @@ configuration
 | `webService.image`             | Docker image name for the web service                               | funcx/web-service |
 | `webService.tag`               | Docker image tag for the web service                                | 213_helm_chart |
 | `webService.pullPolicy`        | Kubernetes pull policy for the web service container                | IfNotPresent |
-| `webService.dbSetupImage`      | Docker image name for the web service database setup image          | funcx/web-service-db |
-| `webService.dbSetupTag`        | Docker image tag for the web service database setup                 | 213_helm_chart |
-| `webService.dbSetupPullPolicy` | Kubernetes pull policy for the web service database setup container | IfNotPresent |
+| `webService.loglevel`          | Setting for the App logging level                                   | DEBUG          |
 | `webService.advertisedRedisPort` | Redis port that the forwarder (outside of cluster) can reach | 6379 |'
 | `webService.advertisedRedisHost` | Redis host that the forwarder (outside of cluster) can reach | localhost |'
 | `webService.globusClient`      | Client ID for globus app. Obtained from [http://developers.globus.org](http://developers.globus.org) | |
