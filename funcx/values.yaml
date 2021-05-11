@@ -9,9 +9,7 @@ webService:
   tag: dev
   pullPolicy: IfNotPresent
 
-  dbSetupImage: funcx/web-service-db
-  dbSetupTag: dev
-  dbSetupPullPolicy: IfNotPresent
+  loglevel: DEBUG
 
   advertisedRedisPort: 6379
   advertisedRedisHost: localhost
