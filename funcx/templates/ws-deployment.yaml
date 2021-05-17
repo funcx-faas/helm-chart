@@ -21,8 +21,8 @@ spec:
           value: "{{ .Release.Name }}-redis-master"
         - name: REDIS_PORT
           value: "6379"
-        - name: WEB_SERVICE_HOST
-          value: "{{ .Release.Name }}-funcx-web-service"
+        - name: WEB_SERVICE_URI
+          value: "http://{{ .Release.Name }}-funcx-web-service:8000"
 
         ports:
           - containerPort: 6000
