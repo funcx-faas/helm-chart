@@ -183,6 +183,7 @@ postgresql:
     type: NodePort
 ```
 Note: endpointUUID cannot be a random string. It needs to satisfy UUID requirement.
+
 7. We can now deploy the funcx stack locally by `helm install -f deployed_values/dev_values.yaml funcx ./funcx`.
 8. We may need to wait for a minute or two for all the applications to be fully deployed. We can check the deployment status by
 `kubectl get pods --namespace default`
@@ -215,6 +216,7 @@ time.sleep(120)
 print(fxc.get_result(res))
 ```
 Note: The endpoint UUID we are using here is the one used in the deployment yaml file. We want to give it a 120-second wait time, for the overhead of manager pod creation. After running the script for the first time, the wait time can be reduced to a couple of seconds.
+
 2. By running `python test_local.py`, we should expect on-screen printout of `Hello World!`, along with the uuids.
 
 ## Clean up
@@ -227,10 +229,10 @@ There are a few values that can be set to adjust the deployed system configurati
 | Value                          | Desciption                                                          | Default           |
 | ------------------------------ | ------------------------------------------------------------------- | ----------------- |
 | `webService.image`             | Docker image name for the web service                               | funcx/web-service |
-| `webService.tag`               | Docker image tag for the web service                                | 213_helm_chart |
-| `webService.pullPolicy`        | Kubernetes pull policy for the web service container                | IfNotPresent |
+| `webService.tag`               | Docker image tag for the web service                                | main |
+| `webService.pullPolicy`        | Kubernetes pull policy for the web service container                | Always |
 | `webService.loglevel`          | Setting for the App logging level                                   | DEBUG          |
-| `webService.advertisedRedisPort` | Redis port that the forwarder (outside of cluster) can reach | 6379 |'
+| `webService.advertisedRedisPort` | Redis port that the forwarder (outside of cluster) can reach | 30379 |'
 | `webService.advertisedRedisHost` | Redis host that the forwarder (outside of cluster) can reach | localhost |'
 | `webService.globusClient`      | Client ID for globus app. Obtained from [http://developers.globus.org](http://developers.globus.org) | |
 | `webService.globusKey`         | Secret for globus app. Obtained from [http://developers.globus.org](http://developers.globus.org) | |
@@ -238,21 +240,21 @@ There are a few values that can be set to adjust the deployed system configurati
 | `endpoint.enabled`            | Deploy an internal kubernetes endpoint? | true |
 | `endpoint.replicas`            | Number of replica endpoint pods to deploy | 1 |
 | `endpoint.image`             | Docker image name for the endpoint                               | funcx/kube-endpoint |
-| `endpoint.tag`               | Docker image tag for the endpoint                                | 213_helm_chart |
-| `endpoint.pullPolicy`        | Kubernetes pull policy for the endpoint container                | IfNotPresent |
+| `endpoint.tag`               | Docker image tag for the endpoint                                | main |
+| `endpoint.pullPolicy`        | Kubernetes pull policy for the endpoint container                | Always |
 | `forwarder.enabled`            | Deploy an internal kubernetes forwarder? | true |
 | `forwarder.minInterchangePort`    | The minimum port to assign interchanges. This will be the first port opened int he pod | 54000 |
 | `forwarder.maxInterchangePort`    | The maximum port to assign interchanges. Only the first three ports are opened in the pod | 54002 |
-| `forwarder.image`             | Docker image name for the forwarder                               | funcx/funcx/forwarder |
-| `forwarder.tag`               | Docker image tag for the forwarder                                | dev |
-| `forwarder.pullPolicy`        | Kubernetes pull policy for the forwarder container                | IfNotPresent |
+| `forwarder.image`             | Docker image name for the forwarder                               | funcx/forwarder |
+| `forwarder.tag`               | Docker image tag for the forwarder                                | main |
+| `forwarder.pullPolicy`        | Kubernetes pull policy for the forwarder container                | Always |
 | `ingress.enabled`              | Deploy an ingres to route traffic to web app?                       | false |
 | `ingress.host`                 | Host name for the ingress. You will be able to reach your web service via a url that starts with the helm release name and ends with this host | uc.ssl-hep.org |
 | `services.postgres.enabled`      | Deploy postgres along with service?                             | true |
 | `services.postgres.externalURI`  | If postgres is deployed externally, what URI connects to it?    | sqlite:////sqlite/app.db |
 | `services.redis.enabled`         | Deploy redis along with service?                             | true |
 | `services.redis.externalHost`  | If redis is deployed externally, what is the host name?    |  |
-| `services.redis.externalPort`  | If redis is deployed externally, what is the port?    |  6379 |
+| `services.redis.externalPort`  | If redis is deployed externally, what is the port?    |  30379 |
 
 
 ## Subcharts
