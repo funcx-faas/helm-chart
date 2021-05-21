@@ -225,3 +225,22 @@ postgresql.postgresqlUsername: funcx
 | ---------- | --------------------- |
 | postgresql | [https://github.com/bitnami/charts/tree/master/bitnami/postgresql](https://github.com/bitnami/charts/tree/master/bitnami/postgresql) |
 | redis      | [https://github.com/bitnami/charts/tree/master/bitnami/redis](https://github.com/bitnami/charts/tree/master/bitnami/redis) |
+
+
+## Helpful Scripts
+It's common for the database to have limited external access. In this case it's
+easier to create a busy-box inside the cluster and access plsql internally.
+
+In the scripts directory there is `psql-busybox.yaml`. Create the pod with 
+```console
+$ kubectl create -f scripts/psql-busybox.yaml
+```
+
+You can then create a shell with `kubectl exec -it psql bash`
+
+Inside that shell there is a fun pg sql client which can be invoked with the
+same Postgres URL found in the web app's config file (`/opt/funcx/app.conf`)
+
+```console
+pgcli postgresql://funcx:XXXXXXXXXXXX@funcx-production-db.XXXXXX.rds.amazonaws.com:5432/funcx
+```
