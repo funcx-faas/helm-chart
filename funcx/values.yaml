@@ -47,6 +47,7 @@ services:
     externalPort: 6379
   rabbitmq:
     enabled: true
+    externalHost: rabbitmq
 
 postgresql:
   postgresqlUsername: funcx
