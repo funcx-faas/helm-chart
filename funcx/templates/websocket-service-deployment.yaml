@@ -1,0 +1,42 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Release.Name }}-funcx-websocket-service
+spec:
+  replicas: {{ .Values.websocketService.replicas }}
+  selector:
+    matchLabels:
+      app: {{ .Release.Name }}-funcx-websocket-service
+  template:
+    metadata:
+      labels:
+        app: {{ .Release.Name }}-funcx-websocket-service
+    spec:
+      containers:
+      - name: {{ .Release.Name }}-funcx-websocket-service
+        image: {{ .Values.websocketService.image }}:{{ .Values.websocketService.tag }}
+        imagePullPolicy: {{ .Values.websocketService.pullPolicy }}
+        env:
+        - name: REDIS_HOST
+    {{- if .Values.services.redis.enabled }}
+          value: ""
+    {{- else }}
+          value: "{{  .Values.services.redis.externalHost }}"
+    {{- end }}
+        - name: REDIS_PORT
+    {{- if .Values.services.redis.enabled }}
+          value: "6379"
+    {{- else }}
+          value: "{{  .Values.services.redis.externalPort }}"
+    {{- end }}
+        - name: RABBITMQ_HOST
+    {{- if .Values.services.rabbitmq.enabled }}
+          value: ""
+    {{- else }}
+          value: "{{  .Values.services.rabbitmq.externalHost }}"
+    {{- end }}
+        - name: WEB_SERVICE_URI
+          value: "http://{{ .Release.Name }}-funcx-web-service:8000"
+
+        ports:
+          - containerPort: 6000
