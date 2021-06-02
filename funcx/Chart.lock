@@ -7,6 +7,6 @@ dependencies:
   version: 10.7.17
 - name: funcx_endpoint
   repository: http://funcx.org/funcx-helm-charts
-  version: 0.1.0
-digest: sha256:ce7dd287154810c18984dc505248746e9982d33195d9d5c9f4043af995acfb5b
-generated: "2020-10-13T11:53:42.047289-05:00"
+  version: 0.2.1
+digest: sha256:fe88632baaff536312aad31bf6924ec230efd307069fd5cee585c9a1e8728cad
+generated: "2021-05-10T11:48:56.654623-05:00"

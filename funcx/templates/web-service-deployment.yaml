@@ -26,6 +26,8 @@ spec:
         env:
         - name: APP_CONFIG_FILE
           value: "/opt/funcx/app.conf"
+        - name: LOGLEVEL
+          value: '{{ .Values.webService.loglevel }}'
         tty: true
         stdin: true
         imagePullPolicy: {{ .Values.webService.pullPolicy }}
