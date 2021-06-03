@@ -10,6 +10,7 @@ metadata:
     alb.ingress.kubernetes.io/healthcheck-path: /v1/version
     alb.ingress.kubernetes.io/listen-ports: '[{"HTTPS":443}]'
     alb.ingress.kubernetes.io/subnets: {{ .Values.ingress.subnets }}
+    alb.ingress.kubernetes.io/load-balancer-name: {{ .Release.Name }}-funcx {{ .Values.ingress.name }}
 {{- else }}
     kubernetes.io/ingress.class: nginx
 {{- end }}
