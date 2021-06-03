@@ -9,6 +9,8 @@ metadata:
     app: {{ .Release.Name }}
 data:
   app.conf: |
+    ENV = "development"
+
     {{ if .Values.services.redis.enabled }}
     REDIS_PORT = 6379
     REDIS_HOST = "{{ .Release.Name }}-redis-master"

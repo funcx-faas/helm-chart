@@ -1,0 +1,29 @@
+StagesAvailable:
+- Original
+- Processed
+TemplateBody:
+  AWSTemplateFormatVersion: '2010-09-09'
+  Description: IAM role for "vpc-cni" [created and managed by eksctl]
+  Outputs:
+    Role1:
+      Value:
+        Fn::GetAtt: Role1.Arn
+  Resources:
+    Role1:
+      Properties:
+        AssumeRolePolicyDocument:
+          Statement:
+          - Action:
+            - sts:AssumeRoleWithWebIdentity
+            Condition:
+              StringEquals:
+                oidc.eks.us-east-1.amazonaws.com/id/55B96EEE361D8212E89253EA78F03CDE:aud: sts.amazonaws.com
+                oidc.eks.us-east-1.amazonaws.com/id/55B96EEE361D8212E89253EA78F03CDE:sub: system:serviceaccount:kube-system:aws-node
+            Effect: Allow
+            Principal:
+              Federated: arn:aws:iam::512084481048:oidc-provider/oidc.eks.us-east-1.amazonaws.com/id/55B96EEE361D8212E89253EA78F03CDE
+          Version: '2012-10-17'
+        ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/AmazonEKS_CNI_Policy
+      Type: AWS::IAM::Role
+

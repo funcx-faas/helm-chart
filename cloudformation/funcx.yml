@@ -1,0 +1,127 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: FuncX
+Parameters:
+  EnvName:
+    Type: String
+    Description: "Name of environment (dev, production, staging, etc)"
+    Default: production
+  VpcId:
+    Type: String
+    Default: vpc-0d3b9f7c3a9c6c1ba
+  FuncXNodeSG:
+    Type: String
+    Default: sg-0b830b11ead5a3be9
+  SubnetA:
+    Type: String
+    Default: subnet-0c0d6b32bb57c39b2 
+  SubnetB:
+    Type: String
+    Default: subnet-0906da1c44cbe3b8d
+  DBName:
+    Type: String
+    Default: 'funcx'
+    Description: 'Name of the default database'
+
+  DBUsername:
+    Type: String
+    Default: 'funcx'
+    Description: 'Username for the admin user'
+
+  DBPassword:
+    Type: String
+    Default: 'changeme'
+    Description: 'Password for the admin user'
+
+Resources:
+  ElastiCacheCacheCluster:
+    Type: "AWS::ElastiCache::CacheCluster"
+    Properties:
+      CacheNodeType: cache.t3.small
+      Engine: redis
+      EngineVersion: 6.x
+      NumCacheNodes: 1
+      PreferredMaintenanceWindow: "thu:08:00-thu:09:00"
+      CacheParameterGroupName: default.redis6.x
+      CacheSubnetGroupName: !Ref ElastiCacheSubnetGroup
+      AutoMinorVersionUpgrade: true
+      VpcSecurityGroupIds:
+        - !Ref FromEksToRedis
+      SnapshotRetentionLimit: 0
+      SnapshotWindow: "03:00-04:00"
+      ClusterName: !Sub "funcx-${EnvName}-001"
+  ElastiCacheSubnetGroup:
+    Type: AWS::ElastiCache::SubnetGroup
+    Properties: 
+      CacheSubnetGroupName: !Sub 'funcx-${EnvName}-cache-subnet-group'
+      Description: !Sub "The subnet group for FuncX ${EnvName} elasticache cluster."
+      SubnetIds:
+        - !Ref SubnetA
+        - !Ref SubnetB
+  RDSDBInstance:
+    Type: "AWS::RDS::DBInstance"
+    DeletionPolicy: Retain
+    Properties:
+      DBInstanceIdentifier: !Sub 'funcx-${EnvName}-db'
+      AllocatedStorage: '20'
+      DBName: !Ref DBName
+      DBInstanceClass: db.t3.micro
+      Engine: postgres
+      MasterUsername: !Ref DBUsername
+      MasterUserPassword: !Ref DBPassword
+      PreferredBackupWindow: "07:00-07:30"
+      BackupRetentionPeriod: 7
+      PreferredMaintenanceWindow: "fri:09:31-fri:10:01"
+      MultiAZ: false
+      EngineVersion: "12.5"
+      AutoMinorVersionUpgrade: true
+      LicenseModel: postgresql-license
+      PubliclyAccessible: true
+      StorageType: gp2
+      Port: '5432'
+      StorageEncrypted: true
+      KmsKeyId: >-
+        arn:aws:kms:us-east-1:512084481048:key/64a46dff-2e95-4177-81be-a5b0f4cee5a9
+      CopyTagsToSnapshot: true
+      EnableIAMDatabaseAuthentication: false
+      EnablePerformanceInsights: true
+      PerformanceInsightsKMSKeyId: >-
+        arn:aws:kms:us-east-1:512084481048:key/64a46dff-2e95-4177-81be-a5b0f4cee5a9
+      PerformanceInsightsRetentionPeriod: 7
+      DeletionProtection: false
+      DBSubnetGroupName: !Ref PrivatePeeredSubnetGroup
+      VPCSecurityGroups:
+        - !Ref FromEksToPostgres
+      MaxAllocatedStorage: 1000
+      DBParameterGroupName: default.postgres12
+      OptionGroupName: "default:postgres-12"
+      CACertificateIdentifier: rds-ca-2019
+  PrivatePeeredSubnetGroup:
+    Type: 'AWS::RDS::DBSubnetGroup'
+    Properties:
+      DBSubnetGroupDescription: !Sub 'funcx-${EnvName}-private'
+      DBSubnetGroupName: !Sub '${EnvName}-private'
+      SubnetIds:
+        - !Ref SubnetA
+        - !Ref SubnetB
+  FromEksToPostgres:
+    Type: "AWS::EC2::SecurityGroup"
+    Properties:
+      GroupDescription: An SG for FuncX EKS RDS access
+      GroupName: !Sub 'funcx_${EnvName}_eks_to_postgres'
+      VpcId: !Ref VpcId
+      SecurityGroupIngress:
+        - SourceSecurityGroupId: !Ref FuncXNodeSG
+          FromPort: 5432
+          IpProtocol: tcp
+          ToPort: 5432
+  FromEksToRedis:
+    Type: "AWS::EC2::SecurityGroup"
+    Properties:
+      GroupDescription: An SG for FuncX EKS RDS access
+      GroupName: !Sub 'funcx_${EnvName}_eks_to_rds'
+      VpcId: !Ref VpcId
+      SecurityGroupIngress:
+        - SourceSecurityGroupId: !Ref FuncXNodeSG
+          FromPort: 6379
+          IpProtocol: tcp
+          ToPort: 6379
