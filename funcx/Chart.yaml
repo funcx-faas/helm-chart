@@ -17,6 +17,10 @@ dependencies:
     version: 10.7.*
     repository: https://charts.bitnami.com/bitnami
     condition: services.redis.enabled
+  - name: rabbitmq
+    version: 8.11.6
+    repository: https://charts.bitnami.com/bitnami
+    condition: services.rabbitmq.enabled
   - name: funcx_endpoint
     version: 0.2.*
     repository: http://funcx.org/funcx-helm-charts

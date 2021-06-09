@@ -32,11 +32,20 @@ Parameters:
     Default: 'changeme'
     Description: 'Password for the admin user'
 
+  DBSnapshotIdentifier:
+    Type: String
+    Description: 'The snapshot of the db to restore from'
+
+  RedisSnapshotName:
+    Type: String
+    Description: 'The snapshot of the db to restore from'
+
 Resources:
   ElastiCacheCacheCluster:
     Type: "AWS::ElastiCache::CacheCluster"
     Properties:
       CacheNodeType: cache.t3.small
+      SnapshotName: !Ref RedisSnapshotName
       Engine: redis
       EngineVersion: 6.x
       NumCacheNodes: 1
@@ -48,7 +57,7 @@ Resources:
         - !Ref FromEksToRedis
       SnapshotRetentionLimit: 0
       SnapshotWindow: "03:00-04:00"
-      ClusterName: !Sub "funcx-${EnvName}-001"
+      ClusterName: !Sub "funcx-${EnvName}-redis"
   ElastiCacheSubnetGroup:
     Type: AWS::ElastiCache::SubnetGroup
     Properties: 
@@ -62,6 +71,7 @@ Resources:
     DeletionPolicy: Retain
     Properties:
       DBInstanceIdentifier: !Sub 'funcx-${EnvName}-db'
+      DBSnapshotIdentifier: !Ref DBSnapshotIdentifier
       AllocatedStorage: '20'
       DBName: !Ref DBName
       DBInstanceClass: db.t3.micro

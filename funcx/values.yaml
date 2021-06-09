@@ -45,6 +45,9 @@ services:
     enabled: true
     externalHost:
     externalPort: 6379
+  rabbitmq:
+    enabled: true
+    externalHost: rabbitmq
 
 postgresql:
   postgresqlUsername: funcx
@@ -63,4 +66,14 @@ redis:
     persistence:
       enabled: false
 
+rabbitmq:
+  auth:
+    username: funcx
+    password: rabbitmq
+  persistence:
+    enabled: false
 
+websocketService:
+  image: funcx/funcx-websocket-service
+  tag: latest
+  pullPolicy: Always
