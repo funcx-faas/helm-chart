@@ -6,7 +6,7 @@ ingress:
 
 webService:
   image: funcx/web-service
-  tag: main
+  tag: v0.3.0
   pullPolicy: Always
 
   loglevel: DEBUG
@@ -22,14 +22,14 @@ endpoint:
   enabled: true
 
 funcx_endpoint:
-  tag: main
+  tag: v0.3.0-3.7
   funcXServiceAddress: http://funcx-funcx-web-service:8000
   pullPolicy: Always
 
 forwarder:
   enabled: true
   image: funcx/forwarder
-  tag: main
+  tag: v0.3.0
   pullPolicy: Always
   tasksPort: 55001
   resultsPort: 55002
@@ -75,5 +75,5 @@ rabbitmq:
 
 websocketService:
   image: funcx/funcx-websocket-service
-  tag: latest
+  tag: v0.3.0
   pullPolicy: Always
