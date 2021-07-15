@@ -1,0 +1,7 @@
+!!!!!!!!! This is a snippet. Add this to the aws-auth configMap with
+!!!!!!!!! kubectl edit -n kube-system configmap/aws-auth
+  mapUsers: |
+    - userarn: arn:aws:iam::512084481048:user/githubactions
+      username: githubactions
+      groups:
+        - github-action-binding
