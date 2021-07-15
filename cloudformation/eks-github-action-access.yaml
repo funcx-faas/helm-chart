@@ -1,0 +1,30 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: eks-github-action-role
+  namespace: default
+rules:
+- apiGroups:
+  - apps
+  resources:
+  - deployments
+  - deployments/scale
+  verbs:
+  - patch
+  - get
+  - list
+  - update
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: github-action-binding
+  namespace: default
+subjects:
+- kind: Group
+  name: github-action-group
+  apiGroup: rbac.authorization.k8s.io
+roleRef:
+  kind: Role
+  name: eks-github-action-role
+  apiGroup: rbac.authorization.k8s.io
