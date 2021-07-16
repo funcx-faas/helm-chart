@@ -69,3 +69,19 @@ Create the Profile by:
 ```
 
 and paste the results in as the `KUBE_CONFIG_DATA_STAGING` Secret.
+
+## Install Sealed Secrets
+We use Bitnami's Sealed Secrets Controller to allow us to check all of the
+config into GitHub. 
+
+Install sealed secrets helm chart
+```bash
+ helm repo add sealed-secrets https://bitnami-labs.github.io/sealed-secrets       
+ helm install sealed-secrets --namespace kube-system sealed-secrets/sealed-secrets
+```
+
+You will need the `kubeseal` command on your computer. Follow instructions for
+[the various options](https://github.com/bitnami-labs/sealed-secrets#homebrew)
+
+
+

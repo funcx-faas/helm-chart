@@ -28,6 +28,24 @@ spec:
           value: "/opt/funcx/app.conf"
         - name: LOGLEVEL
           value: '{{ .Values.webService.loglevel }}'
+    {{- if .Values.secrets }}
+        - name: GLOBUS_CLIENT
+          valueFrom:
+            secretKeyRef:
+              name: {{ .Values.secrets }}
+              key: globusClient
+        - name: GLOBUS_KEY
+          valueFrom:
+            secretKeyRef:
+              name: {{ .Values.secrets }}
+              key: globusKey
+        - name: SQLALCHEMY_DATABASE_URI
+          valueFrom:
+            secretKeyRef:
+              name: {{ .Values.secrets }}
+              key: externalPostgresURI
+    {{- end }}
+
         tty: true
         stdin: true
         imagePullPolicy: {{ .Values.webService.pullPolicy }}

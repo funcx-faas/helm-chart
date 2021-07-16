@@ -1,5 +1,10 @@
 # Default values for funcx.
 # This is a YAML-formatted file.
+
+# If this is provided, it must follow the example shown in example_secrets.yaml
+# The chart will mount environment variables from here into the app.
+secrets:
+
 ingress:
   enabled: false
   host: uc.ssl-hep.org
