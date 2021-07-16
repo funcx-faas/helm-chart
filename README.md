@@ -178,11 +178,29 @@ postgresql:
     nodePort: 30432
     type: NodePort
 ```
+
+## Sealed Secrets
+The chart can take advantage of Bitnami's sealed secrets controller to encrypt
+sensitive config data so it can safely be checked into the GitHub repo.
+
+Create a secrets.yaml file with these values (the values need to be base64 
+encoded (use `echo "secret value" | base64`)). Use the file [example_secrets.yaml](example_secrets.yaml) to see
+how the file should be formatted and the names of the secrets.
+
+With kubectl configured to talk to the target cluster, encode the secrets file
+with the command:
+```console
+cat local-dev-secrets.yaml | \
+        kubeseal --controller-namespace kube-system \
+        --controller-name sealed-secrets \
+        --format yaml > local-dev-sealed-secrets.yaml
+```
 There are a few values that can be set to adjust the deployed system
 configuration
 
 | Value                          | Desciption                                                          | Default           |
 | ------------------------------ | ------------------------------------------------------------------- | ----------------- |
+| `secrets`                      | Name of a secret deployed into the cluster. Must follow example_secrets.yaml | -        |
 | `webService.image`             | Docker image name for the web service                               | funcx/web-service |
 | `webService.tag`               | Docker image tag for the web service                                | 213_helm_chart |
 | `webService.pullPolicy`        | Kubernetes pull policy for the web service container                | IfNotPresent |
