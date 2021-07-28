@@ -39,11 +39,13 @@ spec:
             secretKeyRef:
               name: {{ .Values.secrets }}
               key: globusKey
+      {{- if not .Values.services.postgres.enabled }}
         - name: SQLALCHEMY_DATABASE_URI
           valueFrom:
             secretKeyRef:
               name: {{ .Values.secrets }}
               key: externalPostgresURI
+      {{- end }}
     {{- end }}
 
         tty: true
