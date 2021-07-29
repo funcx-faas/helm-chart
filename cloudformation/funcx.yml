@@ -13,7 +13,7 @@ Parameters:
     Default: sg-0b830b11ead5a3be9
   SubnetA:
     Type: String
-    Default: subnet-0c0d6b32bb57c39b2 
+    Default: subnet-0c0d6b32bb57c39b2
   SubnetB:
     Type: String
     Default: subnet-0906da1c44cbe3b8d
@@ -25,12 +25,22 @@ Parameters:
   DBUsername:
     Type: String
     Default: 'funcx'
-    Description: 'Username for the admin user'
+    Description: 'Username for the postgres admin user'
 
   DBPassword:
     Type: String
     Default: 'changeme'
-    Description: 'Password for the admin user'
+    Description: 'Password for the postgres admin user'
+
+  RabbitMQUsername:
+    Type: String
+    Default: 'funcx'
+    Description: 'Username for the rabbitmq user'
+
+  RabbitMQPassword:
+    Type: String
+    Default: 'changeme'
+    Description: 'Password for the rabbitmq user'
 
   DBSnapshotIdentifier:
     Type: String
@@ -60,7 +70,7 @@ Resources:
       ClusterName: !Sub "funcx-${EnvName}-redis"
   ElastiCacheSubnetGroup:
     Type: AWS::ElastiCache::SubnetGroup
-    Properties: 
+    Properties:
       CacheSubnetGroupName: !Sub 'funcx-${EnvName}-cache-subnet-group'
       Description: !Sub "The subnet group for FuncX ${EnvName} elasticache cluster."
       SubnetIds:
@@ -124,6 +134,17 @@ Resources:
           FromPort: 5432
           IpProtocol: tcp
           ToPort: 5432
+  FromEksToRabbitMQ:
+    Type: "AWS::EC2::SecurityGroup"
+    Properties:
+      GroupDescription: An SG for FuncX RabbitMQ access
+      GroupName: !Sub 'funcx_${EnvName}_eks_to_rabbitmq'
+      VpcId: !Ref VpcId
+      SecurityGroupIngress:
+        - SourceSecurityGroupId: !Ref FuncXNodeSG
+          FromPort: 5672
+          IpProtocol: tcp
+          ToPort: 5672
   FromEksToRedis:
     Type: "AWS::EC2::SecurityGroup"
     Properties:
@@ -135,3 +156,21 @@ Resources:
           FromPort: 6379
           IpProtocol: tcp
           ToPort: 6379
+  RabbitMQ:
+    Type: AWS::AmazonMQ::Broker
+    Properties:
+      AutoMinorVersionUpgrade: true
+      BrokerName: !Sub 'funcx_${EnvName}_rabbitmq'
+      DeploymentMode: SINGLE_INSTANCE
+      EngineType: RABBITMQ
+      EngineVersion: "3.8.11"
+      HostInstanceType: mq.t3.micro
+      PubliclyAccessible: false
+      SecurityGroups:
+        - !Ref FromEksToRabbitMQ
+      StorageType: ebs
+      SubnetIds:
+        - !Ref SubnetA
+      Users:
+        - Username: !Ref RabbitMQUsername
+          Password: !Ref RabbitMQPassword
