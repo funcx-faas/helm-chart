@@ -39,7 +39,7 @@ Parameters:
 
   RabbitMQPassword:
     Type: String
-    Default: 'changeme'
+    Default: 'rabbitmq'
     Description: 'Password for the rabbitmq user'
 
   DBSnapshotIdentifier:
