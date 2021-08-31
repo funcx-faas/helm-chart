@@ -30,13 +30,12 @@ This only works on Linux systems.
 
 ---
 
-Install from the `forwarder_rearch_1` branch of the [funcx repo](https://github.com/funcx-faas/funcX)
-Here are the steps to install, preferably to your active conda environment:
+Here are the steps to install, preferably into your active conda environment:
 
 ```shell script
 git clone https://github.com/funcx-faas/funcX.git
 cd funcX
-git checkout forwarder_rearch_1
+git checkout main
 pip install funcx_sdk
 pip install funcx_endpoint
 ```
@@ -97,7 +96,9 @@ kubectl create secret generic funcx-sdk-tokens \
     ```
 3. Create your own `values.yaml` inside the Git ignored directory `deployed_values/`
 4. Obtain Globus Client ID and Secret. These secrets need to exist in the
-   correct Globus Auth app. Ask for access to the credentials and then paste them into your values.yaml as
+   correct Globus Auth app. Ask for access to the credentials by contacting
+   https://github.com/BenGalewsky or sending a message to the `dev` funcx Slack
+   channel. Once you have your credentials, paste them into your `values.yaml`:
     ```yaml
     webService:
       globusClient: <<your app client>>
