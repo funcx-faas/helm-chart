@@ -130,7 +130,7 @@ to see if the tables are there. If not, it runs the setup script.
 
 To manually setup the keys for debugging, here are the steps:
 
-1. Create your cureve server public/secret keypair with the create_certs.py script:
+1. Create your curve server public/secret keypair with the create_certs.py script:
 
     ```shell script
     # CD into the funcx-forwarder repo
