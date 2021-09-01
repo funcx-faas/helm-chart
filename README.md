@@ -7,31 +7,35 @@ Helm Chart for Deploying funcX stack
 
 This application includes:
 * FuncX Web-Service
+* FuncX Websocket Service
+* FuncX Forwarder
 * Kuberentes endpoint
 * Postgres database
 * Redis Shared Data Structure
-
-> :warning: **THIS IS A TEST DEPLOYMENT**: The web-service and forwarder can be deployed, while the funcx-endpoint is not yet properly supported
+* RabbitMQ broker
 
 ## Preliminaries
-The following dependencies must be set up before you can deploy the helm chart:
-
-## FuncX Endpoint
 
 There are two modes in which funcx-endpoints could be deployed:
 
 1. funcx-endpoint deployed outside k8s, connecting to hosted services in k8s
-2. funcx-endpoint deployed with k8s (broken currently)
+2. funcx-endpoint deployed inside k8s
 
-### Deploying funcx-endpoint externally
+### Deploying funcx-endpoint outside of K8s
 
-Install from the `forwarder_rearch_1` branch of the [funcx repo](https://github.com/funcx-faas/funcX)
-Here are the steps to install, preferably to your active conda environment:
+---
+**NOTE**
+
+This only works on Linux systems.
+
+---
+
+Here are the steps to install, preferably into your active conda environment:
 
 ```shell script
 git clone https://github.com/funcx-faas/funcX.git
 cd funcX
-git checkout forwarder_rearch_1
+git checkout main
 pip install funcx_sdk
 pip install funcx_endpoint
 ```
@@ -42,9 +46,13 @@ Next create an endpoint configuration:
 funcx-endpoint
 ```
 
-Update the configuration file to point the endpoint to locally deployed services, which we will setup in the next sections.
+Update the endpoint's configuration file to point the endpoint to locally
+deployed services, which we will setup in the next sections. If using default
+values, the funcx_service_address should be set to http://localhost:5000/v2.
 
-    ```python
+`~/.funcx/default/config.py`
+
+```python
     config = Config(
     executors=[HighThroughputExecutor(
         provider=LocalProvider(
@@ -54,12 +62,11 @@ Update the configuration file to point the endpoint to locally deployed services
         ),
     )],
     funcx_service_address="http://127.0.0.1:5000/api/v1", # <--- UPDATE THIS LINE
-)
+)   
+```
 
-     ```
-### Deploying funcx-endpoint into the k8s deployment
 
-> :warning: **THIS IS BROKEN AT THE MOMENT**
+### Deploying funcx-endpoint into the K8s deployment
 
 We can deploy the kubernetes endpoint as a pod as part of the chart. It
 needs to have a valid copy of the funcx's `funcx_sdk_tokens.json` which can
@@ -77,11 +84,44 @@ secret named `funcx-sdk-tokens`.
 
 You can install this secret with:
 ```shell script
-pushd ~/.funcx
-kubectl create secret generic funcx-sdk-tokens --from-file=credentials/funcx_sdk_tokens.json
-popd
+kubectl create secret generic funcx-sdk-tokens \
+  --from-file ~/.funcx/credentials/funcx_sdk_tokens.json
 ```
 
+## Installing FuncX
+1. Make a clone of this repository
+2. Download subcharts:
+    ```shell script
+     helm dependency update funcx
+    ```
+3. Create your own `values.yaml` inside the Git ignored directory `deployed_values/`
+4. Obtain Globus Client ID and Secret. These secrets need to exist in the
+   correct Globus Auth app. Ask for access to the credentials by contacting
+   https://github.com/BenGalewsky or sending a message to the `dev` funcx Slack
+   channel. Once you have your credentials, paste them into your `values.yaml`:
+    ```yaml
+    webService:
+      globusClient: <<your app client>>
+      globusKey: <<your app secret>>
+    ```
+5. Install the helm chart:
+    ```shell script
+    helm install -f deployed_values/values.yaml funcx funcx
+    ```
+6. You can access your web service through the ingress or via a port forward
+to the web service pod. Instructions are provided in the displayed notes.
+
+7. You should be able to see the endpoint registering with the web service
+in their respective logs, along with the forwarder log. Check the endpoint's
+logs for its ID. 
+
+### Database Setup
+Until we migrate the webservice to use an ORM, we need to set the database
+schema up using a SQL script. This is accomplished by an init-container that
+is run prior to starting up the web service container. This setup image checks
+to see if the tables are there. If not, it runs the setup script.
+
+### Forwarder Debugging
 
 > :warning: *Only for debugging*: You can set the forwarder curve server key manually by creating
   a public/secret curve pair, registering them with kubernetes as a secret and then specifying
@@ -90,7 +130,7 @@ popd
 
 To manually setup the keys for debugging, here are the steps:
 
-1. Create your cureve server public/secret keypair with the create_certs.py script:
+1. Create your curve server public/secret keypair with the create_certs.py script:
 
     ```shell script
     # CD into the funcx-forwarder repo
@@ -105,96 +145,63 @@ kubectl create secret generic funcx-forwarder-secrets --from-file=.curve/server.
 
 3. Once the endpoint is registered to the newly deployed `funcx-forwarder`, make sure to check the `~/.funcx/<ENDPOINT_NAME>/certificates/server.key` file to confirm that the manually added key has been returned to the endpoint.
 
-### Forwarder
-The forwarder needs to be able to open and manage arbitrary ports which is
-not compatible with some of Kubernetes requirements. For now we will run it
-as a docker container, but outside of the cluster.
-
-Launch a copy of forwarder outside of kubernetes, listening on port 8080:
-    ```shell script
-     docker run --rm -it -p 8080:3031 funcx/forwarder:213_helm_chart
-    ```
-
-## How to Install FuncX
-1. Make a clone of this repository
-2. Download subcharts:
-    ```shell script
-     helm dependency update funcx
-    ```
-3. Create your own `values.yaml` inside the Git ignored directory `deployed_values/`
-4. Obtain Globus Client ID and Secret. Paste them into your values.yaml as
-    ```yaml
-    webService:
-      globusClient: <<your app client>>
-      globusKey: <<your app secret>>
-    ```
-5. Install the helm chart:
-    ```shell script
-    helm install -f deployed_values/values.yaml funcx funcx
-    ```
-6. You can access your web service through the ingres or via a port forward
-to the web service pod. Instructions are provided in the displayed notes.
-
-7. You should be able to see the endpoint registering with the web service
-in their respective logs, along with the forwarder log
-
-## Database Setup
-Until we migrate the webservice to use an ORM, we need to set the database
-schema up using a SQL script. This is accomplished by an init-container that
-is run prior to starting up the web service container. This setup image checks
-to see if the tables are there. If not, it runs the setup script.
 
 ## Values
 
-> :warning: **USE THE FOLLOWING dev_values.yaml**
+> :warning: **USE THE FOLLOWING deployed_values/values.yaml** Omit the
+> funcx_endpoint section if using an externally deployed endpoint.
 
 ``` yaml
 webService:
   pullPolicy: Always
-  host: http://localhost:5000
   globusClient: <GLOBUS_CLIENT_ID_STRING>
   globusKey: <GLOBUS_CLIENT_KEY_STRING>
-  tag: forwarder_rearch_update
+  tag: main
 
-endpoint:
-  enabled: false
+websocketService:
+  pullPolicy: Always
+  tag: main
+
+# Note that we install numpy into the worker so that we can run tests against the local 
+# deployment
+# Note that the workerImage needs the same python version as is used in the funcx_endpoint 
+# image. This requirement will be relaxed
 funcx_endpoint:
+  enabled: true
+  funcXServiceAddress: http://funcx-funcx-web-service:8000
   image:
-    tag: exception
+    pullPolicy: Always
+    tag: main
+  maxBlocks: 2
+  initBlocks: 0
+  minBlocks: 2
+  workerInit: pip install funcx-endpoint==0.3.2 numpy
+  workerImage: python:3.7-buster
 
 forwarder:
   enabled: true
-  tag: forwarder_redesign
+  tag: main
   pullPolicy: Always
-  local_image: funcx-forwarder-dev1:latest
 
 redis:
   master:
     service:
       nodePort: 30379
       type: NodePort
+
 postgresql:
   service:
     nodePort: 30432
     type: NodePort
+
+rabbitmq:
+  auth:
+    erlangCookie: c00kie
+  pullPolicy: Always
 ```
 
-## Sealed Secrets
-The chart can take advantage of Bitnami's sealed secrets controller to encrypt
-sensitive config data so it can safely be checked into the GitHub repo.
+### Additional config
 
-Create a secrets.yaml file with these values (the values need to be base64 
-encoded (use `echo "secret value" | base64`)). Use the file [example_secrets.yaml](example_secrets.yaml) to see
-how the file should be formatted and the names of the secrets.
-
-With kubectl configured to talk to the target cluster, encode the secrets file
-with the command:
-```console
-cat local-dev-secrets.yaml | \
-        kubeseal --controller-namespace kube-system \
-        --controller-name sealed-secrets \
-        --format yaml > local-dev-sealed-secrets.yaml
-```
 There are a few values that can be set to adjust the deployed system
 configuration
 
@@ -229,6 +236,23 @@ configuration
 | `services.redis.externalHost`  | If redis is deployed externally, what is the host name?    |  |
 | `services.redis.externalPort`  | If redis is deployed externally, what is the port?    |  6379 |
 
+
+## Sealed Secrets
+The chart can take advantage of Bitnami's sealed secrets controller to encrypt
+sensitive config data so it can safely be checked into the GitHub repo.
+
+Create a secrets.yaml file with these values (the values need to be base64 
+encoded (use `echo "secret value" | base64`)). Use the file [example_secrets.yaml](example_secrets.yaml) to see
+how the file should be formatted and the names of the secrets.
+
+With kubectl configured to talk to the target cluster, encode the secrets file
+with the command:
+```console
+cat local-dev-secrets.yaml | \
+        kubeseal --controller-namespace kube-system \
+        --controller-name sealed-secrets \
+        --format yaml > local-dev-sealed-secrets.yaml
+```
 
 ## Subcharts
 This chart uses two subcharts to supply dependent services. You can update
