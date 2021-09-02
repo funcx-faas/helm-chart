@@ -29,11 +29,11 @@ spec:
     {{- else }}
           value: "{{  .Values.services.redis.externalPort }}"
     {{- end }}
-        - name: RABBITMQ_HOST
+        - name: RABBITMQ_URI
     {{- if .Values.services.rabbitmq.enabled }}
           value: ""
     {{- else }}
-          value: "{{  .Values.services.rabbitmq.externalHost }}"
+          value: "{{  .Values.services.rabbitmq.externalURI }}"
     {{- end }}
         - name: WEB_SERVICE_URI
           value: "http://{{ .Release.Name }}-funcx-web-service:8000"
