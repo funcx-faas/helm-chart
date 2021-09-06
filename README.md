@@ -9,7 +9,7 @@ This application includes:
 * FuncX Web-Service
 * FuncX Websocket Service
 * FuncX Forwarder
-* Kuberentes endpoint
+* Kubernetes endpoint
 * Postgres database
 * Redis Shared Data Structure
 * RabbitMQ broker
