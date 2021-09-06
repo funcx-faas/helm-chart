@@ -14,7 +14,61 @@ This application includes:
 * Redis Shared Data Structure
 * RabbitMQ broker
 
+## benc notes on what i added onto a hetzner machine installed with ubuntu 20.04.03 - as root (because this is a VM dedicated to this project, so I don't care about user permissions for kubernetes level stuff)
+
+
+apt-get install docker.io
+curl -LO https://storage.googleapis.com/minikube/releases/latest/minikube-linux-amd64
+install minikube-linux-amd64 /usr/local/bin/minikube
+
+apt-get install contrack   # because: ❌  Exiting due to GUEST_MISSING_CONNTRACK: Sorry, Kubernetes 1.22.1 requires conntrack to be installed in root's path
+
+minikube --driver=none    # because i am root in a VM. otherwise apparently driver=docker might be nice? I haven't tried
+
+Now can run to see running pods
+
+$ minikube kubectl -- get pods -A
+
+This gives me 7 runnings k8s pods.
+
+
+now install helm, following debian/apt instructions here: 
+https://helm.sh/docs/intro/install/
+
+curl https://baltocdn.com/helm/signing.asc | sudo apt-key add -
+sudo apt-get install apt-transport-https --yes
+echo "deb https://baltocdn.com/helm/stable/debian/ all main" | sudo tee /etc/apt/sources.list.d/helm-stable-debian.list
+sudo apt-get update
+sudo apt-get install helm
+
+now can run:
+
+# helm
+
+and see the default helm help text.
+
+now get the funcx helm repo:
+
+mkdir src
+cd  src
+git clone git@github.com:funcx-faas/helm-chart
+cd helm-chart
+
+and run the first helm command from below:
+
+helm dependency update funcx
+
+which will download some stuff.
+
+Note that it downloads a funcx_endpoint chart over http - that isn't something contained in this repo, even though it is a funcx related chart...
+
+see notes further down for continuation...
+
 ## Preliminaries
+
+how is this a preliminary rather than part of the main install? it even looks like a funcx-endpoint is set up as part of helm automatically ... so is this whole endpoint section irrelevant for an initial install? or at least, there should be better intro description at this point
+that an endpoint will be deployed inside k8s?
+
 
 There are two modes in which funcx-endpoints could be deployed:
 
@@ -89,6 +143,9 @@ kubectl create secret generic funcx-sdk-tokens \
 ```
 
 ## Installing FuncX
+
+[how does this section relate to the previous section?]
+
 1. Make a clone of this repository
 2. Download subcharts:
     ```shell script
@@ -110,14 +167,26 @@ kubectl create secret generic funcx-sdk-tokens \
     ```
 6. You can access your web service through the ingress or via a port forward
 to the web service pod. Instructions are provided in the displayed notes.
+[what ingress? there is no ingress resource created by helm? talking about the
+'service' resource for these?] 
+
+now i see a bunch of srevices including a funcx endpoint
 
 7. You should be able to see the endpoint registering with the web service
 in their respective logs, along with the forwarder log. Check the endpoint's
 logs for its ID. 
 
+[clarify which logs / *where* those logs are? explicitly which (3?) logs to
+look at... - who is registering with whom?]
+
+
+
 ### Database Setup
-Until we migrate the webservice to use an ORM, we need to set the database
-schema up using a SQL script. This is accomplished by an init-container that
+[Until we migrate the webservice to use an ORM, (remove roadmap from install instructions)]
+
+We need to set the database
+schema up using a SQL script. [clarify what is happening here... where is the SQL script? how is it run?
+the text makes it sound like init-container will run it? but I don't see any evidence of that]  This is accomplished by an init-container that
 is run prior to starting up the web service container. This setup image checks
 to see if the tables are there. If not, it runs the setup script.
 
@@ -151,6 +220,13 @@ kubectl create secret generic funcx-forwarder-secrets --from-file=.curve/server.
 > :warning: **USE THE FOLLOWING deployed_values/values.yaml** Omit the
 > funcx_endpoint section if using an externally deployed endpoint.
 
+should I use the following values.yaml or the values.yaml I was told to make earlier?
+dedupe - and if this section is the values.yaml i should be using, move it up to
+where i am told to create the values.yaml
+
+eg. why do I need to be exposing postgres to the internet?
+
+
 ``` yaml
 webService:
   pullPolicy: Always
@@ -165,7 +241,7 @@ websocketService:
 # Note that we install numpy into the worker so that we can run tests against the local 
 # deployment
 # Note that the workerImage needs the same python version as is used in the funcx_endpoint 
-# image. This requirement will be relaxed
+# image. This requirement will be relaxed [give an issue url for tracking this or remove the promise/dream. it is barely relevant to config docs]
 funcx_endpoint:
   enabled: true
   funcXServiceAddress: http://funcx-funcx-web-service:8000
@@ -201,6 +277,8 @@ rabbitmq:
 ```
 
 ### Additional config
+[are these values that are defaulted in funcx/values.yaml and can be overridden in
+deployed_values/values.yaml?]
 
 There are a few values that can be set to adjust the deployed system
 configuration
@@ -238,6 +316,7 @@ configuration
 
 
 ## Sealed Secrets
+[why would i want to do this?]
 The chart can take advantage of Bitnami's sealed secrets controller to encrypt
 sensitive config data so it can safely be checked into the GitHub repo.
 
@@ -256,7 +335,7 @@ cat local-dev-secrets.yaml | \
 
 ## Subcharts
 This chart uses two subcharts to supply dependent services. You can update
-settings for these by referenceing the subchart name and values from
+settings for these by referencing the subchart name and values from
 their READMEs.
 
 For example
@@ -278,7 +357,7 @@ In the scripts directory there is `psql-busybox.yaml`. Create the pod with
 $ kubectl create -f scripts/psql-busybox.yaml
 ```
 
-You can then create a shell with `kubectl exec -it psql bash`
+You can then create a shell with `kubectl exec -it plsql bash`
 
 Inside that shell there is a fun pg sql client which can be invoked with the
 same Postgres URL found in the web app's config file (`/opt/funcx/app.conf`)
@@ -286,3 +365,11 @@ same Postgres URL found in the web app's config file (`/opt/funcx/app.conf`)
 ```console
 pgcli postgresql://funcx:XXXXXXXXXXXX@funcx-production-db.XXXXXX.rds.amazonaws.com:5432/funcx
 ```
+[if this is intended to be used inside a dev cluster, is there a better way to name
+the DB than this rd.amazonaws url?
+
+Where does the XXXX password come from in a dev cluster?
+Here's a better command line for my minikube setup:
+
+root@plsql:/# pgcli postgresql://funcx:leftfoot1@funcx-postgresql:5432/public
+
