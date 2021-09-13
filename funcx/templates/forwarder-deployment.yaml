@@ -42,12 +42,8 @@ spec:
             fieldRef:
               fieldPath: status.podIP
     {{- end }}
-        - name: TASKS_PORT
-          value: "{{ .Values.forwarder.tasksPort }}"
-        - name: RESULTS_PORT
-          value: "{{ .Values.forwarder.resultsPort }}"
-        - name: COMMANDS_PORT
-          value: "{{ .Values.forwarder.commandsPort }}"
+        - name: ENDPOINT_BASE_PORT
+          value: "{{ .Values.forwarder.endpointBasePort }}"
         tty: true
         stdin: true
         imagePullPolicy: {{ .Values.forwarder.pullPolicy }}
@@ -57,14 +53,12 @@ spec:
         {{- end }}
         ports:
           - containerPort: 8080  # Forwarder REST port
-          - containerPort: {{ add .Values.forwarder.tasksPort 1 }}
-            hostPort: {{ add .Values.forwarder.tasksPort 1 }}
-          - containerPort: {{ add .Values.forwarder.resultsPort 1 }}
-            hostPort: {{ add .Values.forwarder.resultsPort 1 }}
-          - containerPort: {{ add .Values.forwarder.commandsPort 1 }}
-            hostPort: {{ add .Values.forwarder.commandsPort 1 }}
-          - containerPort: 55005 # Debug
-            hostPort: 55005
+          - containerPort: {{ add .Values.forwarder.endpointBasePort 1 }}
+            hostPort: {{ add .Values.forwarder.endpointBasePort 1 }}
+          - containerPort: {{ add .Values.forwarder.endpointBasePort 2 }}
+            hostPort: {{ add .Values.forwarder.endpointBasePort 2 }}
+          - containerPort: {{ add .Values.forwarder.endpointBasePort 3 }}
+            hostPort: {{ add .Values.forwarder.endpointBasePort 3 }}
         {{- if .Values.forwarder.server_cert }}
         volumeMounts:
         - name: funcx-forwarder-secret

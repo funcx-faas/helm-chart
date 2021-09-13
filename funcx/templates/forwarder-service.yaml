@@ -10,16 +10,16 @@ spec:
      targetPort: 8080
      name: "rest"
      protocol: TCP
-   - port: {{ .Values.forwarder.tasksPort }}
-     targetPort: {{ .Values.forwarder.tasksPort }}
+   - port: {{ .Values.forwarder.endpointBasePort }}
+     targetPort: {{ .Values.forwarder.endpointBasePort }}
      name: "zmq1"
      protocol: TCP
-   - port: {{ add .Values.forwarder.resultsPort 1 }}
-     targetPort: {{ add .Values.forwarder.resultsPort 1 }}
+   - port: {{ add .Values.forwarder.endpointBasePort 1 }}
+     targetPort: {{ add .Values.forwarder.endpointBasePort 1 }}
      name: "zmq2"
      protocol: TCP
-   - port: {{ add .Values.forwarder.commandsPort 2 }}
-     targetPort: {{ add .Values.forwarder.commandsPort 2 }}
+   - port: {{ add .Values.forwarder.endpointBasePort 2 }}
+     targetPort: {{ add .Values.forwarder.endpointBasePort 2 }}
      name: "zmq3"
      protocol: TCP
 
@@ -27,4 +27,4 @@ spec:
     app: {{ .Release.Name }}-forwarder
   type: ClusterIP
 
-  {{- end }}
+{{- end }}

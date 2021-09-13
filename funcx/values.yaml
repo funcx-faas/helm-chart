@@ -36,9 +36,7 @@ forwarder:
   image: funcx/forwarder
   tag: main
   pullPolicy: Always
-  tasksPort: 55001
-  resultsPort: 55002
-  commandsPort: 55003
+  endpointBasePort: 55001
 
 # External services - these should be included for development environment
 # but on EKS we usually use the Amazon supported services
