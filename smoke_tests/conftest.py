@@ -16,18 +16,6 @@ config = {
 }
 
 
-@pytest.fixture(autouse=True, scope="session")
-def load_funcx_session(request, pytestconfig):
-    """Load funcX sdk client for the entire test suite,
-
-    The special path `local` indicates that configuration will not come
-    from a pytest managed configuration file; in that case, see
-    load_dfk_local_module for module-level configuration management.
-    """
-
-    # config = pytestconfig.getoption('config')[0]
-
-
 def pytest_addoption(parser):
     """Add funcx-specific command-line options to pytest."""
     parser.addoption(
@@ -58,7 +46,7 @@ def pytest_addoption(parser):
     )
 
 
-@pytest.fixture
+@pytest.fixture(scope="session")
 def fxc_args(pytestconfig):
     fxc_args = {
         "funcx_service_address": pytestconfig.getoption("--service-address")[0],
@@ -68,25 +56,25 @@ def fxc_args(pytestconfig):
     return fxc_args
 
 
-@pytest.fixture
+@pytest.fixture(scope="session")
 def fxc(fxc_args):
     fxc = FuncXClient(**fxc_args)
     return fxc
 
 
-@pytest.fixture
+@pytest.fixture(scope="session")
 def async_fxc(fxc_args):
     fxc = FuncXClient(**fxc_args, asynchronous=True)
     return fxc
 
 
-@pytest.fixture
+@pytest.fixture(scope="session")
 def fx(fxc):
     fx = FuncXExecutor(fxc)
     return fx
 
 
-@pytest.fixture
+@pytest.fixture(scope="session")
 def endpoint(pytestconfig):
     endpoint = pytestconfig.getoption("--endpoint")[0]
     return endpoint
