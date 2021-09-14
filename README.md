@@ -69,11 +69,22 @@ see notes further down for continuation...
 how is this a preliminary rather than part of the main install? it even looks like a funcx-endpoint is set up as part of helm automatically ... so is this whole endpoint section irrelevant for an initial install? or at least, there should be better intro description at this point
 that an endpoint will be deployed inside k8s?
 
+make a decision for the user - as they are new. they can try different ways later, which
+can be documented elsewhere - for example, this is the helm repo so should be talking
+about the helm deployment of the endpoint. Or pointing people at the endpoint repo.
 
-There are two modes in which funcx-endpoints could be deployed:
+There are two modes in which funcx-endpoints could be deployed: 
+
 
 1. funcx-endpoint deployed outside k8s, connecting to hosted services in k8s
 2. funcx-endpoint deployed inside k8s
+
+Also be clear on the deployment modes: production-like (eg with many users, centrally,
+with expection that images are from tags, endpoints deployed by other people) 
+and development-like - eg on my own private VM with my own hacked up source changes and
+all sorts of mess, and everything including endpoints deployed by me.
+
+be clear throughout this document what refers to those two use cases.
 
 ### Deploying funcx-endpoint outside of K8s
 
@@ -129,6 +140,17 @@ be created by running on your local workstation and running
  funcx-endpoint start
 ```
 
+(or if I don't have this on my local workstation because I'm deploying purely
+inside kubernetes...? can I run this as a command inside minikube - eg after I've
+got this running?
+yes, with lots of error messages to ignore, I did this:
+
+docker run --rm -ti funcx/kube-endpoint:main /home/funcx/boot.sh funcx
+
+)
+
+
+
 You will be prompted to follow the authorization link and paste the resulting
 token into the console. Once you do that, funcx-endpoint will create a
 `~/.funcx` directory and provide you with a token file.
@@ -144,7 +166,8 @@ kubectl create secret generic funcx-sdk-tokens \
 
 ## Installing FuncX
 
-[how does this section relate to the previous section?]
+[how does this section relate to the previous section? I think the
+]
 
 1. Make a clone of this repository
 2. Download subcharts:
@@ -152,6 +175,9 @@ kubectl create secret generic funcx-sdk-tokens \
      helm dependency update funcx
     ```
 3. Create your own `values.yaml` inside the Git ignored directory `deployed_values/`
+     [forward reference to the two different values sections later on in this
+      document: should I just have the three lines mentioned here? or should I
+      be copy-pasting a huge example?]
 4. Obtain Globus Client ID and Secret. These secrets need to exist in the
    correct Globus Auth app. Ask for access to the credentials by contacting
    https://github.com/BenGalewsky or sending a message to the `dev` funcx Slack
@@ -170,7 +196,23 @@ to the web service pod. Instructions are provided in the displayed notes.
 [what ingress? there is no ingress resource created by helm? talking about the
 'service' resource for these?] 
 
-now i see a bunch of srevices including a funcx endpoint
+now i see a bunch of services including a funcx endpoint
+
+looks like this:
+
+# minikube kubectl get pods
+NAME                                            READY   STATUS    RESTARTS         AGE
+funcx-endpoint-86756c48c8-flhqf                 1/1     Running   0                95m
+funcx-forwarder-db744678c-fqxhg                 1/1     Running   0                95m
+funcx-funcx-web-service-97585d958-6zrvh         1/1     Running   0                95m
+funcx-funcx-websocket-service-bb766fbcd-rvbgj   1/1     Running   0                95m
+funcx-postgresql-0                              1/1     Running   0                95m
+funcx-rabbitmq-0                                1/1     Running   0                95m
+funcx-redis-master-0                            1/1     Running   0                95m
+funcx-redis-slave-0                             1/1     Running   0                95m
+funcx-redis-slave-1                             1/1     Running   0                95m
+
+
 
 7. You should be able to see the endpoint registering with the web service
 in their respective logs, along with the forwarder log. Check the endpoint's
@@ -225,7 +267,6 @@ dedupe - and if this section is the values.yaml i should be using, move it up to
 where i am told to create the values.yaml
 
 eg. why do I need to be exposing postgres to the internet?
-
 
 ``` yaml
 webService:
@@ -373,3 +414,11 @@ Here's a better command line for my minikube setup:
 
 root@plsql:/# pgcli postgresql://funcx:leftfoot1@funcx-postgresql:5432/public
 
+# upgrades
+How does I upgrade this? It was installed using the latest images at install time I guess?
+I see a funcx-web-service tag from 15h ago after running helm upgrade funcx funcx...
+(imgage ID d21432c1525a) - so is that what is running now? looks like it pulled a new image when I rebooted the server (!)
+
+That seems a bit chaotic. And how do I switch these to using my own source builds?
+
+how can i run a test job against this install?
