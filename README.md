@@ -115,12 +115,6 @@ to the web service pod. Instructions are provided in the displayed notes.
 in their respective logs, along with the forwarder log. Check the endpoint's
 logs for its ID. 
 
-### Database Setup
-Until we migrate the webservice to use an ORM, we need to set the database
-schema up using a SQL script. This is accomplished by an init-container that
-is run prior to starting up the web service container. This setup image checks
-to see if the tables are there. If not, it runs the setup script.
-
 ### Forwarder Debugging
 
 > :warning: *Only for debugging*: You can set the forwarder curve server key manually by creating
