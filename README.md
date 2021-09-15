@@ -221,6 +221,103 @@ logs for its ID.
 [clarify which logs / *where* those logs are? explicitly which (3?) logs to
 look at... - who is registering with whom?]
 
+Endpoint log will look like:
+
+2021-09-14 16:36:02 endpoint.endpoint_manager:172 [INFO]  Starting endpoint with uuid: cfd389f3-4eda-413b-af95-4d54a8e944dc
+
+forwarder will look like:
+{"asctime": "2021-09-14 18:20:44,535", "name": "funcx_forwarder.forwarder", "levelname": "DEBUG", "message": "endpoint_status_message", "log_type": "endpoint_status_message", "endpoint_id": "cfd389f3-4eda-413b-af95-4d54a8e944dc", "endpoint_status_message": {"_payload": null, "_header": "b'\\xcf\\xd3\\x89\\xf3N\\xdaA;\\xaf\\x95MT\\xa8\\xe9D\\xdc'", "ep_status": {"task_id": -2, "info": {"total_cores": 0, "total_mem": 0, "new_core_hrs": 0, "total_core_hrs": 0, "managers": 0, "active_managers": 0, "total_workers": 0, "idle_workers": 0, "pending_tasks": 0, "outstanding_tasks": {}, "worker_mode": "no_container", "scheduler_mode": "hard", "scaling_enabled": true, "mem_per_worker": null, "cores_per_worker": 1.0, "prefetch_capacity": 10, "max_blocks": 100, "min_blocks": 1, "max_workers_per_node": 1, "nodes_per_block": 1}}, "task_statuses": {}}}
+
+web service will look like:
+{"asctime": "2021-09-14 16:36:03,273", "name": "funcx_web_service", "levelname": "INFO", "message": "Successfully registered cfd389f3-4eda-413b-af95-4d54a8e944dc in database"}
+
+### connecting clients
+
+the startup message (from helm) has a couple of kubectl port-forward commands that might be a bit wrong - i ended up using these two:
+# minikube kubectl -- port-forward --address 0.0.0.0 service/funcx-funcx-web-service 8000
+# minikube kubectl -- port-forward --address 0.0.0.0 service/funcx-funcx-websocket-service 6000
+
+This will expose the services on port 8000 and port 6000  - because this is a service, the 2nd port number in the helm suggested text is ignored, I think - so that could be removed in a PR (as long as I check and justify that with documentation links)
+
+now from a working funcx install, create a funcx client pointed at the current 
+service, like this:
+
+fxc = FuncXClient(funcx_service_address="http://amber.cqx.ltd.uk:8000/v2")
+
+and then run quickstart guide style stuff - probably i don't need to paste it here, but
+I could...
+
+
+from funcx.sdk.client import FuncXClient
+
+fxc = FuncXClient(PARMS HERE)
+
+def hello_world():
+  return "Hello World!"
+
+func_uuid = fxc.register_function(hello_world)
+
+tutorial_endpoint = 'LOCAL ENDPOINT HERE'
+result = fxc.run(endpoint_id=tutorial_endpoint, function_id=func_uuid)
+
+print(fxc.get_result(result))
+
+this gets as far as submitting for me, but attempts to get the result always give
+funcx.utils.errors.TaskPending: Task is pending due to waiting-for-nodes
+
+There's a pod started up ok - called funcx-1631645705407 without any more interesting name. i guess thats a worker? after 106s all that is in the logs is a warning from pip running as root
+- but i can see pip running.
+
+So i should put a note here about how long things might take here?
+Note that it has changes from waiting-for-ep in the error to waiting-for-nodes
+after several minutes, so there is more stuff going on, slowly... 5m later and its still churning. it's had one restart 63s ago... nothing clear about *why* it restarted though.
+in kubectl describe pod XXXXX I can see the commandline - a pip install and then a funcx-manager.
+It seems to end with: PROCESS_WORKER_POOL main event loop exiting normally
+
+So lets debug a bit more about where the task execution happens or not.
+
+Is this doing a pip install on every restart (?!) - that's a question to ask.
+(maybe it's not actually installing new stuff though - which is why i'm not seeing any
+packages being installed on subsequent runs)
+
+Eventually it went into "CrashLoopBackOff" at the kubernetes level, which maybe isn't the right behaviour for "exiting normal" at the PROCESS_WORKER_POOL level? Ask on chat about that.
+
+There's nothing in the endpoint logs about starting up that funcx process worker container, or about jobs happening - just every 600s a keepalive message
+
+Digging into the endpoint container environment, find ~/.funcx/funcx/EndpointInterchange.log
+which is reporting a sequence of errors:
+
+2021-09-15 14:26:55.592 funcx_endpoint.executors.high_throughput.executor:540 [WARNING]  [MTHR
+EAD] Executor shutting down due to version mismatch in interchange
+2021-09-15 14:26:55.610 funcx_endpoint.executors.high_throughput.executor:542 [ERROR]  [MTHREA
+D] Exception: Task failure due to loss of manager b'18e00d57935c'
+NoneType: None
+2021-09-15 14:26:55.610 funcx_endpoint.executors.high_throughput.executor:577 [INFO]  [MTHREAD
+] queue management worker finished
+
+then every 10ms this message *forever* 2021-09-15 14:26:55.613 funcx_endpoint:504 [ERROR]  [MAIN] Something broke while forwarding re
+sults from executor to forwarder queues
+Traceback (most recent call last):
+  File "/usr/local/lib/python3.7/site-packages/funcx_endpoint/endpoint/interchange.py", line 4
+90, in _main_loop
+    results = self.results_passthrough.get(False, 0.01)
+  File "/usr/local/lib/python3.7/multiprocessing/queues.py", line 108, in get
+    res = self._recv_bytes()
+  File "/usr/local/lib/python3.7/multiprocessing/connection.py", line 216, in recv_bytes
+    buf = self._recv_bytes(maxlength)
+  File "/usr/local/lib/python3.7/multiprocessing/connection.py", line 407, in _recv_bytes
+    buf = self._recv(4)
+  File "/usr/local/lib/python3.7/multiprocessing/connection.py", line 383, in _recv
+    raise EOFError
+EOFError
+
+- that kind of failure should be resulting in a kubernetes level restart (or some other exit/restart) not a hang loop like this?
+- mismatch of what? between who? is it the process worker pool container vs the funcx container?  Looking at interchange.py - this might not even be from a version mismatch: it can happen if reg_flag is false (due to a json deserialisation problem in registration message). Other than that, it can happen because the python versions from the manager vs the interchange.
+
+whle the task on the client side still reports:
+funcx.utils.errors.TaskPending: Task is pending due to waiting-for-ep
+
+
 
 
 ### Database Setup
@@ -422,3 +519,12 @@ I see a funcx-web-service tag from 15h ago after running helm upgrade funcx func
 That seems a bit chaotic. And how do I switch these to using my own source builds?
 
 how can i run a test job against this install?
+
+
+## Upgrading and developing against non-main environments
+
+i've been trying this but it's not clear that it is pulling down the latest of
+everything: (I think it does, but just the images are not changing often
+upstream from me?)
+ helm upgrade -f deployed_values/values.yaml funcx funcx --recreate-pods
+
