@@ -237,6 +237,8 @@ the startup message (from helm) has a couple of kubectl port-forward commands th
 # minikube kubectl -- port-forward --address 0.0.0.0 service/funcx-funcx-web-service 8000
 # minikube kubectl -- port-forward --address 0.0.0.0 service/funcx-funcx-websocket-service 6000
 
+These port forwards are only temporary - they run as foreground processes and break as soon as the pods change (for example due to restarts). That seems a bit frustrating if they're meant to be pointing to services. Is there a more persistent kubernetes configuration that can be used to expose to the world? And for other people, to expose to whatever their security-scoped environment is?
+
 This will expose the services on port 8000 and port 6000  - because this is a service, the 2nd port number in the helm suggested text is ignored, I think - so that could be removed in a PR (as long as I check and justify that with documentation links)
 
 now from a working funcx install, create a funcx client pointed at the current 
@@ -314,21 +316,85 @@ EOFError
 - that kind of failure should be resulting in a kubernetes level restart (or some other exit/restart) not a hang loop like this?
 - mismatch of what? between who? is it the process worker pool container vs the funcx container?  Looking at interchange.py - this might not even be from a version mismatch: it can happen if reg_flag is false (due to a json deserialisation problem in registration message). Other than that, it can happen because the python versions from the manager vs the interchange.
 
+I commented on these logs not being obvious, in slack, and ben g gave me:
+> so for debugging, I added a value to the endpoint helm chart detachEndpoint -since the endpoint runs in a daemon, the output doesn’t show up in the pod’s logs.. Setting this to false means the endpoint runs in the main thread. Less reliable, but easy for debugging
+
+I haven't tried that yet. But if its good, then... if k8s endpoints are also expected for end users, maybe they should also get the same functionality? (eg why is this running as a daemon when its inside a pod anyway managing that?)
+
 whle the task on the client side still reports:
 funcx.utils.errors.TaskPending: Task is pending due to waiting-for-ep
 
+At the same time, the process worker service repeatedly exits and is restarted by kubernetes (with it eventually hitting CrashLoopBackOff to slow this down) - presumably that's somehow opposite half of this same error message, but it isn't clear. The entire log file is:
 
+root@amber:~# minikube kubectl logs -- funcx-1631715998878
+WARNING: Running pip as the 'root' user can result in broken permissions and conflicting behaviour with the system package manager. It is recommended to use a virtual environment instead: https://pip.pypa.io/warnings/venv
+PROCESS_WORKER_POOL main event loop exiting normally
+root@amber:~# 
 
+I found a more interesting log file here:
+/home/funcx/.funcx/funcx/HighThroughputExecutor/worker_logs/8e8f66c705d3/manager.log
 
-### Database Setup
-[Until we migrate the webservice to use an ORM, (remove roadmap from install instructions)]
+which eventully reports a critical error that the interchange heartbeat is missing - not at all like the kubectl log error of: ... exiting normally.
 
-We need to set the database
-schema up using a SQL script. [clarify what is happening here... where is the SQL script? how is it run?
-the text makes it sound like init-container will run it? but I don't see any evidence of that]  This is accomplished by an init-container that
-is run prior to starting up the web service container. This setup image checks
-to see if the tables are there. If not, it runs the setup script.
+It's a bit weird to be 2 minutes in before the manager even notices that the interchange isn't even alive.
 
+So... the version mismatch:
+This is invoking python:3.6-buster - so let's track down where that was.
+
+Selecting the correct image (eg for AWS AMIs, not docker images) has been a massive
+usability problem for testing parsl on image based systems... I'm not sure how much it
+matters in end-use though, if you're assuming that users make app-specific images that
+are tied to their own environment? I don't have experience there.  I haven't spent any
+time seriously trying to solve this for parsl, but eg ZZ did container stuff for parsl
+so I'd be interested to here any of his relevant experiences. not really a  problem
+i am interested in solving.
+
+so grep around in the source tree for python:3.6-buster
+
+The funcx endpoint helm chart is coming from a URL on funcx.org, not the helm-charts repo,
+under here: http://funcx.org/funcx-helm-charts
+
+There's a 0.3 chart in the funcx-helm-charts repo by the looks of it - perhaps I can try that, by hacking at the server-side chart. What's the right way to be controlling this?
+
+While checking if process claims to be alive, the endpoint output line:
+"funcx-endpoint process is still alive. Next check in 600s." 
+should be given a timestamp - it doesn't seem to go through the logging mechanism so
+is not getting a timestamp that way. So I have no idea when it last ran, or if its
+an outdated message, etc.
+
+This command to install the worker inside the worker container is installing funcx-endpoint and directing the output to a file called =0.2.0. That is probably not what is intended. Put the whole thing in ' marks perhaps.
+
+      pip install funcx-endpoint>=0.2.0
+
+This is in the funcx endpoint helm chart... along with the naughty command right next
+to it:
+workerImage and 
+workerInit
+so I should be able to override those myself in my values.yaml?
+
+funcx_endpoint:
+  workerImage: python:3.8-buster
+  workerInit: 'pip install "funcx-endpoint>=0.2.0"'
+
+note that workerInit is embedded python string syntax, not a plain string, so
+you can't use ' marks inside it because it is substituted in somewhere I think
+and that causes a syntax error - eg try the above line with " and ' swapped
+and see:
+"""
+File "/home/funcx/.funcx/funcx/config.py", line 24
+    worker_init='pip install 'funcx-endpoint>=0.2.0'',
+                                  ^
+SyntaxError: invalid syntax
+"""
+because string substitution into source without proper escaping.
+
+This could be fixed - either by reading the string from a different place and
+not doing python source substitution, or by performing escaping on the string.
+This behaviour is likely to cause trouble to anyone doing non-trivial bash
+in their worker_init.
+
+it's frustrating that the python version is not set to the version that
+is actually used by the endpoint.
 ### Forwarder Debugging
 
 > :warning: *Only for debugging*: You can set the forwarder curve server key manually by creating
@@ -511,6 +577,10 @@ Here's a better command line for my minikube setup:
 
 root@plsql:/# pgcli postgresql://funcx:leftfoot1@funcx-postgresql:5432/public
 
+
+
+how can i run a test job against this install?
+
 # upgrades
 How does I upgrade this? It was installed using the latest images at install time I guess?
 I see a funcx-web-service tag from 15h ago after running helm upgrade funcx funcx...
@@ -518,7 +588,6 @@ I see a funcx-web-service tag from 15h ago after running helm upgrade funcx func
 
 That seems a bit chaotic. And how do I switch these to using my own source builds?
 
-how can i run a test job against this install?
 
 
 ## Upgrading and developing against non-main environments
