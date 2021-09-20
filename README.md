@@ -589,6 +589,25 @@ I see a funcx-web-service tag from 15h ago after running helm upgrade funcx func
 That seems a bit chaotic. And how do I switch these to using my own source builds?
 
 
+python versions:
+ The endpoint repo funcX/Dockerfile-endpoint defaults to building with python 3.8.
+ That doesn't align with the python that is being supplied by the helm images.
+ So rebuild my client, specifying 3.7.
+
+Perhaps funcx/Dockerfile-endpoint should force the user to choose, rather than building
+a likely invalid one.
+
+The broad topic here is python versions are poorly co-ordinated as supplied - yes, they
+have to align, but the defaults supplied should all align with each other at least.
+(they need to align across all three of: the submitting client, the endpoint, the
+endpoint workers, and all three are wrong by default)
+
+
+Python mismatch between interchange and worker pod results in an eternal hang: interchange reports inside its endpoint logs that there's a version mismatch (but not what the version mismathc is). The worker just restarts every couple of minutes with missing heartbeat: no description of *why* the heartbeat is missing. The end user is never informed of anything more than "waiting for nodes". It's unclear to me if that should be a richer message or a richer hard error: could tell user that the worker version is wrong at least, becaues that is likely an error that won't fix itself (i.e. is not a transient error). Richer error here would help the submitting user understand that they need to contact the endpoint administrator for rectification and what to tell them, beyond "waiting for nodes".
+
+
+funcx endpoint worker pods lose their logs at each restart - which is awkward to examine when the logs are in an every-two-minutes restart loop due to missing heartbeat. [should they even be autorestarting in that situation, rather than letting the endpoint handle restarting them if it still wants them?]
+
 
 ## Upgrading and developing against non-main environments
 
