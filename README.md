@@ -412,7 +412,7 @@ workerInit
 so I should be able to override those myself in my values.yaml?
 
 funcx_endpoint:
-  workerImage: python:3.8-buster
+  workerImage: python:3.7-buster
   workerInit: 'pip install "funcx-endpoint>=0.2.0"'
 
 note that workerInit is embedded python string syntax, not a plain string, so
@@ -656,3 +656,69 @@ everything: (I think it does, but just the images are not changing often
 upstream from me?)
  helm upgrade -f deployed_values/values.yaml funcx funcx --recreate-pods
 
+## Python version notes
+
+this is important for not having errors, so probably should be near the top.
+
+there are three different places where the python interpreter must be the same
+major version (eg all 3.7). the tooling as it is now does not make that the
+case by default - [TODO: make it so]
+
+- the endpoint worker
+- the endpoint
+- the submitting user python env
+
+TODO: make this consistent for a first time install experience: either describe
+how to configure it in all three places, or make the defaults/documented
+command lines make that happen.
+
+The setup as I came to it is installing 3 different incompatible python version
+without telling me not to.
+
+## Port notes
+
+nmap of amber.cqx.ltd.uk:
+
+```
+$ nmap amber.cqx.ltd.uk -p- -4
+
+Starting Nmap 7.40 ( https://nmap.org ) at 2021-09-20 19:41 UTC
+Nmap scan report for amber.cqx.ltd.uk (65.108.55.218)
+Host is up (0.055s latency).
+Other addresses for amber.cqx.ltd.uk (not scanned): 2a01:4f9:c010:e030::1
+Not shown: 65522 closed ports
+PORT      STATE SERVICE
+22/tcp    open  ssh
+2379/tcp  open  etcd-client
+2380/tcp  open  etcd-server
+6000/tcp  open  X11
+8000/tcp  open  http-alt
+8080/tcp  open  http-proxy
+8443/tcp  open  https-alt
+10249/tcp open  unknown
+10250/tcp open  unknown
+10256/tcp open  unknown
+55001/tcp open  unknown
+55002/tcp open  unknown
+55003/tcp open  unknown
+
+```
+
+The above notes have two ports forwarded manually using kubectl port forwarding each time.
+
+funcx-forwarder is configured to expose a number of ports, 55002-55005.
+
+but in its environment, it declares these: which don't quite align.
+it declares these:
+      TASKS_PORT:                    55001
+      RESULTS_PORT:                  55002
+      COMMANDS_PORT:                 55003
+as well as 8080
+
+As far as remote nmap is concerned, 55001-3 are exposed, not -4 and -5.
+
+So what's the configuration divergence here? (is there unnecessary configuration of those
+ports, seeing as 55001 is finding its way in there anyway?)
+
+the funcx-forwarder service lists 55001, 55003, 55005
+which is a *third* combination of those different ports. (!)
