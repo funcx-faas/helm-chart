@@ -722,3 +722,31 @@ ports, seeing as 55001 is finding its way in there anyway?)
 
 the funcx-forwarder service lists 55001, 55003, 55005
 which is a *third* combination of those different ports. (!)
+they're labelled in the service as zmq1, zmq2, zmq3
+
+... is the forwarder running in some weird non-kubernetes network env? (eg the host native network env?)  it appears to have an IP: field described in the pod:
+IP:           65.108.55.218
+IPs:
+  IP:           65.108.55.218
+
+and the chart has "hostNetwork: true"
+ - so all the port forwards that its doing in the 55000...whatever range are unneeded I guess and thats why it doesn't matter that they're messed up?
+
+[TODO: understand and rationalise that configuration. if this is always host network,
+are any of those other port descriptions necessary at all? not in the minikube case
+I think, but what about in real deployment]
+
+what do the ports: declarations do in  funcx/templates/forwarder-deployment.yaml anyway?
+it looks like they're explicitly adding on 1 to the actual values ??
+
+These ports look like harmless fluff that is intellectually taxing/wasteful on someone
+trying to understand... is that true?
+
+Who is communicating with the forwarder?
+
+
+TODO: If these ports can be configured publicly, can the ports for the web service
+and websockets service also be configured that way?  What's the difference between
+the web(sockets) ports and the forwarder ports?  On the production system are they
+made fully public in different ways?
+
