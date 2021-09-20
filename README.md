@@ -1,6 +1,30 @@
 # helm-chart
 Helm Chart for Deploying funcX stack
 
+# About this document
+
+Goal: Getting started guide for a new funcX developer
+making their first install for themselves to hack on.
+[so there should be a prefered main path with minimal
+choices for customisation of the initial install - eg proper defaults for python
+version]
+
+Non-goals:
+
+* Using the helm charts to deploy to the live/dev systems.
+* Customising your helm deploy.
+
+# About benc's notes
+
+Notes are here for various purposes: (in no particular order)
+
+i) making this document better support the Document Goal
+ii) making the default configuration of funcX in the repositories better support the
+Document Goal
+iii) making funcX better support users (people invoking functions, and people operating
+their own endpoints).
+
+
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 [![NSF-2004894](https://img.shields.io/badge/NSF-2004894-blue.svg)](https://nsf.gov/awardsearch/showAward?AWD_ID=2004894)
 [![NSF-2004932](https://img.shields.io/badge/NSF-2004932-blue.svg)](https://nsf.gov/awardsearch/showAward?AWD_ID=2004932)
@@ -13,6 +37,7 @@ This application includes:
 * Postgres database
 * Redis Shared Data Structure
 * RabbitMQ broker
+
 
 ## benc notes on what i added onto a hetzner machine installed with ubuntu 20.04.03 - as root (because this is a VM dedicated to this project, so I don't care about user permissions for kubernetes level stuff)
 
@@ -64,7 +89,7 @@ Note that it downloads a funcx_endpoint chart over http - that isn't something c
 
 see notes further down for continuation...
 
-## Preliminaries
+## Preliminaries [funcx endpoint]
 
 how is this a preliminary rather than part of the main install? it even looks like a funcx-endpoint is set up as part of helm automatically ... so is this whole endpoint section irrelevant for an initial install? or at least, there should be better intro description at this point
 that an endpoint will be deployed inside k8s?
@@ -72,6 +97,10 @@ that an endpoint will be deployed inside k8s?
 make a decision for the user - as they are new. they can try different ways later, which
 can be documented elsewhere - for example, this is the helm repo so should be talking
 about the helm deployment of the endpoint. Or pointing people at the endpoint repo.
+
+I think for an initial install, the in-kubernetes default endpoint which configures
+itself almost automatically should be chosen for getting started. With instructions
+on attaching an external endpoint described *afterwards* at the end of this document.
 
 There are two modes in which funcx-endpoints could be deployed: 
 
@@ -606,7 +635,8 @@ endpoint workers, and all three are wrong by default)
 Python mismatch between interchange and worker pod results in an eternal hang: interchange reports inside its endpoint logs that there's a version mismatch (but not what the version mismathc is). The worker just restarts every couple of minutes with missing heartbeat: no description of *why* the heartbeat is missing. The end user is never informed of anything more than "waiting for nodes". It's unclear to me if that should be a richer message or a richer hard error: could tell user that the worker version is wrong at least, becaues that is likely an error that won't fix itself (i.e. is not a transient error). Richer error here would help the submitting user understand that they need to contact the endpoint administrator for rectification and what to tell them, beyond "waiting for nodes".
 
 
-funcx endpoint worker pods lose their logs at each restart - which is awkward to examine when the logs are in an every-two-minutes restart loop due to missing heartbeat. [should they even be autorestarting in that situation, rather than letting the endpoint handle restarting them if it still wants them?]
+funcx endpoint worker pods lose their logs at each restart - which is awkward to examine when the logs are in an every-two-minutes restart loop due to missing heartbeat. debuggability might be enhanced by putting them in a pod-lifetime dir rather than a container-lifetime dir? [should they even be autorestarting in that situation, rather than letting the endpoint handle restarting them if it still wants them? - c.f. parsl discussion about how kubernetes pods are managed by the parsl kubernetes provider?] 
+
 
 
 ## Upgrading and developing against non-main environments
