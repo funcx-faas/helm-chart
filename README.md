@@ -38,9 +38,20 @@ This application includes:
 * Redis Shared Data Structure
 * RabbitMQ broker
 
+## Kubernetes pre-reqs
 
-## benc notes on what i added onto a hetzner machine installed with ubuntu 20.04.03 - as root (because this is a VM dedicated to this project, so I don't care about user permissions for kubernetes level stuff)
+You will need a kubernetes installation.
 
+Some ways in which you can get an installation:
+
+(benc: hetzner cloud + minikube)
+(slack suggestion: docker desktop)
+
+## eg. minikube + hetzner cloud
+
+base os: ubuntu 20.04.03
+
+running everything as roo
 
 apt-get install docker.io
 curl -LO https://storage.googleapis.com/minikube/releases/latest/minikube-linux-amd64
@@ -68,7 +79,9 @@ sudo apt-get install helm
 
 now can run:
 
+```
 # helm
+```
 
 and see the default helm help text.
 
@@ -89,7 +102,7 @@ Note that it downloads a funcx_endpoint chart over http - that isn't something c
 
 see notes further down for continuation...
 
-## Preliminaries [funcx endpoint]
+## Preliminaries [for funcx endpoint]
 
 how is this a preliminary rather than part of the main install? it even looks like a funcx-endpoint is set up as part of helm automatically ... so is this whole endpoint section irrelevant for an initial install? or at least, there should be better intro description at this point
 that an endpoint will be deployed inside k8s?
@@ -115,7 +128,7 @@ all sorts of mess, and everything including endpoints deployed by me.
 
 be clear throughout this document what refers to those two use cases.
 
-### Deploying funcx-endpoint outside of K8s
+### Deploying funcx-endpoint outside of K8s [this is "advanced" - move to end of doc, and crossref with other "install an endpoint" document]
 
 ---
 **NOTE**
@@ -194,9 +207,6 @@ kubectl create secret generic funcx-sdk-tokens \
 ```
 
 ## Installing FuncX
-
-[how does this section relate to the previous section? I think the
-]
 
 1. Make a clone of this repository
 2. Download subcharts:
