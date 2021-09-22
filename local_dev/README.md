@@ -15,33 +15,36 @@ cluster.
 Note that `make dev-up` uses the `--atomic` flag to `helm install`, meaning
 that a failure to start will terminate and cleanup the cluster.
 
-## microk8s shims
+## microk8s configuration
 
-For `microk8s` development, we need to handle the fact that commands are
-namespaced, but the results will not be compatible with shared scripts.
-For example, with `helm` installed under `microk8s`, you have the command
-`microk8s helm3`.
+For `microk8s` development, use `kubectl` and `helm` installed outside of
+`microk8s`. i.e. We want the commands `helm` and `kubectl`, not
+`microk8s kubectl` and `microk8s helm3`.
 
-While we could write all of our dev tooling to be microk8s-friendly, it is
-simpler for any `microk8s` users to add shims as follows.
+To do this, take the following steps after installing `microk8s` to install the
+tools:
 
-In `~/.microk8s-shims/helm`:
-```
-#!/bin/bash
-exec microk8s helm3 "$@"
-```
+- `snap install kubectl --classic`
+- `snap install helm --classic`
 
-In `~/.microk8s-shims/kubectl`:
-```
-#!/bin/bash
-exec microk8s kubectl "$@"
-```
+> NOTE: You can use non-snap install methods as well. `snap` is presumed here
+> only because it is required for `microk8s` installation.
 
-and add `~/.microk8s-shims` to their `PATH`.
+Then write your `microk8s` config into `~/.kube/config` with
 
-> NOTE: in case it is not obvious, the exact dirname does not matter. If you
-> use another location already for custom tools, such as `~/bin/` or
-> `~/.local/bin/`, that would be acceptable for this purpose as well.
+    mkdir -p ~/.kube
+    microk8s config > ~/.kube/config
+    chmod 600 ~/.kube/config
+
+You can also combine `microk8s config` configuration with other kubectl
+config if preferred. For cases where you want some other `kubectl` context
+(e.g. for use against EKS clusters), combine microk8s config with
+existing/other config:
+
+    microk8s config > microk8s-config
+    KUBECONFIG=~/.kube/config:./microk8s-config kubectl config view --flatten > tmp
+    mv tmp ~/.kube/config
+    chmod 600 ~/.kube/config
 
 ## Using a Local Image
 
