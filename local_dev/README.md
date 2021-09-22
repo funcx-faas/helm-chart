@@ -55,7 +55,23 @@ The steps vary a little based on your local kubernetes toolchain.
 
 ### Under minikube
 
-TODO: stub
+1. Build local docker image
+
+To use a local image in minikube, you will need to build a local image using
+`docker`, with no special invocation. Go to the `funcx-web-service` repo and run
+
+    $ docker build --no-cache . -t funcx_web_service:develop
+
+2. Set your dev values.yaml to use the image
+
+Use these settings:
+
+```yaml
+webService:
+  pullPolicy: Never
+  image: funcx_web_service
+  tag: develop
+```
 
 ### Under microk8s
 
