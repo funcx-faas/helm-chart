@@ -1,4 +1,4 @@
-DEV_CONF=deployed_values/dev.yaml
+DEV_CONF=deployed_values/values.yaml
 WEB_SERVICE_LOCAL_PORT=5000
 WEBSOCKET_SERVICE_LOCAL_PORT=6000
 HELM_TIMEOUT=3m0s
