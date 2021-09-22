@@ -64,7 +64,7 @@ TODO: stub
 To use a local image in microk8s, you will need to build a local image using
 `docker`, with no special invocation. Go to the `funcx-web-service` repo and run
 
-    $ docker build . -t funcx_web_service:develop
+    $ docker build --no-cache . -t funcx_web_service:develop
 
 2. Import the image into the microk8s registry
 
