@@ -280,3 +280,56 @@ same Postgres URL found in the web app's config file (`/opt/funcx/app.conf`)
 ```console
 pgcli postgresql://funcx:XXXXXXXXXXXX@funcx-production-db.XXXXXX.rds.amazonaws.com:5432/funcx
 ```
+
+
+## Deployment/Release Guide
+
+
+The following is an incomplete guide to deploying a new release onto our development or production clusters.
+
+Here are the components that need updating as part of a release, in the order they should be updated
+due to dependencies:
+
+* funcx-common (Once @sirosen's changes are merged, the component below will need this component to be updated first)
+    * Update version number
+    * [Optional?] Release changes to Pypi
+
+* funcx-forwarder
+    * Update requirements to use latest funcx-common
+    * Update version number
+    * merge above changes to main in a PR
+    * Create a branch off of main with the version number, for, eg: 'v0.3.3'.
+      For dev releases, do alpha releases `v0.3.3a0`
+    * Ensure that the branch has the CI tests passing and the publish step working
+
+* funcx-web-service
+    * Same steps as funcx-forwarder
+
+* funcx-websocket-service
+    * Same steps as funcx-websocket-service
+
+* Update helm-charts
+    * Update the smoke-tests in the helm-charts to use the new version numbers in `conftest.py`
+
+* Prepare to deploy to cluster.
+    * Confirm that all the bits to be deployed should be available on dockerhub.
+    * Run `kubectl config current-context` which should return something like:
+
+    >> arn:aws:eks:us-east-1:512084481048:cluster/funcx-dev
+
+    * Make sure the right cluster is pointed to by kubectl, and use this terminal for all following steps.
+
+* Download the current values deployed to the target cluster as a backup.
+    >> kubectl get values
+
+* Update the values to use the release branchnames as the new tags
+
+* Deploy with:
+    >> helm upgrade -f prod-values.yaml funcx funcx
+
+Note: It is preferable to upgrade rather than blow away the current deployment and redeploy because,
+    wiping the current deployment loses state that ties the Route53 entries to point at the ALB, and
+    any configuration on the ALB itself could be lost (eg, throttling logic @joshbryan p.s check this?)
+
+
+
