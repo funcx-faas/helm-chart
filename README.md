@@ -288,7 +288,8 @@ pgcli postgresql://funcx:XXXXXXXXXXXX@funcx-production-db.XXXXXX.rds.amazonaws.c
 The following is an incomplete guide to deploying a new release onto our development or production clusters.
 
 Here are the components that need updating as part of a release, in the order they should be updated
-due to dependencies:
+due to dependencies. Note that only components that have changes for release need to updated and the
+rest can safely be skipped:
 
 * funcx-common (Once @sirosen's changes are merged, the component below will need this component to be updated first)
     * Update version number
