@@ -1,0 +1,5 @@
+#!/bin/bash
+kubectl get pods \
+    --namespace default \
+    -l "app=funcx-funcx-websocket-service" \
+    -o jsonpath="{.items[0].metadata.name}"
