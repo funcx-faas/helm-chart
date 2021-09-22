@@ -11,13 +11,11 @@ dev-up:
 	$(MAKE) start-port-forward
 
 .PHONY: start-port-forward stop-port-forward
-# includes a short sleep to get the intiial output from the backgrounded
-# port-forward commands flushed
 start-port-forward:
 	@echo "\n= start port forwarding\n"
-	kubectl port-forward "$$(./local_dev/get-web-pod-name)" $(WEB_SERVICE_LOCAL_PORT):5000 &
-	kubectl port-forward "$$(./local_dev/get-websocket-pod-name)" $(WEBSOCKET_SERVICE_LOCAL_PORT):6000 &
-	@sleep 1
+	WEB_SERVICE_LOCAL_PORT=$(WEB_SERVICE_LOCAL_PORT) \
+		WEBSOCKET_SERVICE_LOCAL_PORT=$(WEBSOCKET_SERVICE_LOCAL_PORT) \
+		./local_dev/daemonized-port-forward
 	@echo "\n= port forwarding started\n"
 # use 'pkill -f' to look at full command lines
 # be specific: match on these specific port forwarding commands to avoid
