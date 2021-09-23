@@ -750,3 +750,53 @@ and websockets service also be configured that way?  What's the difference betwe
 the web(sockets) ports and the forwarder ports?  On the production system are they
 made fully public in different ways?
 
+
+
+### nice ways to get endpoint in k8s cluster ofr devs
+
+eg make it consistent every time over restarts rather than random each time?
+
+or output it somewhere that cna be read programmatically by clients?
+
+
+### k8s endpoint worker names
+
+... are millisecond based, so I have seen two pods next to each otehr with the same name:
+
+# minikube kubectl get pods
+NAME                                            READY   STATUS    RESTARTS        AGE
+funcx-1632329996841                             1/1     Running   0               4m3s
+funcx-1632329998841                             1/1     Running   0               4m2s
+funcx-1632330007842                             1/1     Running   0               3m53s
+funcx-endpoint-86756c48c8-nc7r2                 1/1     Running   2 (10m ago)     12m
+funcx-forwarder-db744678c-6r9nq                 1/1     Running   0               12m
+funcx-funcx-web-service-6745bd4f5d-p59qc        1/1     Running   0               12m
+funcx-funcx-websocket-service-bb766fbcd-x82sg   1/1     Running   0               12m
+funcx-postgresql-0                              1/1     Running   0               12m
+funcx-rabbitmq-0                                1/1     Running   0               12m
+funcx-redis-master-0                            1/1     Running   0               12m
+funcx-redis-slave-0                             1/1     Running   0               12m
+funcx-redis-slave-1                             1/1     Running   0               12m
+plsql                                           1/1     Running   389 (22m ago)   16d
+
+
+## websocket-service tag bug in helm chart
+
+uses 'latest' not 'main' which is weeks old at time of my writing
+i am trying to switch to main
+
+
+## web-service build (and check others?) has a requiremenets.txt which
+installs from git funcx api main
+
+docker build doesn't invalidate the cache as the api main tag advances,
+becaues the command is not changed, and so rebuilds are not built with the
+latest main.
+
+this is terrible and obscure and i only noticed it randomly in passing.
+
+===
+> docker build --no-cache -t funcx-web-service  is my default
+￼
+says yadu.
+===

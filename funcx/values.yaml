@@ -80,5 +80,5 @@ rabbitmq:
 
 websocketService:
   image: funcx/funcx-websocket-service
-  tag: latest
+  tag: main
   pullPolicy: Always
