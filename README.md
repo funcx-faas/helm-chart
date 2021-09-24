@@ -328,12 +328,16 @@ rest can safely be skipped:
 * Deploy with:
     >> helm upgrade -f prod-values.yaml funcx funcx
 
----
-**NOTE**
-    It is preferable to upgrade rather than blow away the current deployment and redeploy because,
-    wiping the current deployment loses state that ties the Route53 entries to point at the ALB, and
-    any configuration on the ALB itself could be lost.
----
+> :warning: It is preferable to upgrade rather than blow away the current deployment and redeploy
+    because, wiping the current deployment loses state that ties the Route53 entries to point at
+    the ALB, and any configuration on the ALB itself could be lost.
+
+> :warning: If the deployment was wiped here are the steps:
+    * Go to Route53 on AWS Console and select the hosted zone: `dev.funcx.org`. Select the
+      appropriate A record for the deployment you are updating and edit the record to update the
+      value to something like `dualstack.k8s-default-funcxfun-dd14845f35-608065658.us-east-1.elb.amazonaws.com.`
+    * Add the ALB to the existing WAF Rules here: `https://console.aws.amazon.com/wafv2/homev2/web-acl/funcx-prod-web-acl/d82023f9-2cd8-4aed-b8e3-460dd399f4b0/overview?region=us-east-1#`
+
 
 * While a new forwarder will be launched on upgrade, the new one will not go online
   since it requires the ports that are in use by the older one. So you must manually
@@ -344,5 +348,5 @@ rest can safely be skipped:
 
   >> kubctl delete pods <NAME_OF_THE_OLDER_FUNCX_FORWARDER>
 
-  
+
 
