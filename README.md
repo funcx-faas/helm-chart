@@ -328,9 +328,21 @@ rest can safely be skipped:
 * Deploy with:
     >> helm upgrade -f prod-values.yaml funcx funcx
 
-Note: It is preferable to upgrade rather than blow away the current deployment and redeploy because,
+---
+**NOTE**
+    It is preferable to upgrade rather than blow away the current deployment and redeploy because,
     wiping the current deployment loses state that ties the Route53 entries to point at the ALB, and
-    any configuration on the ALB itself could be lost (eg, throttling logic @joshbryan p.s check this?)
+    any configuration on the ALB itself could be lost.
+---
 
+* While a new forwarder will be launched on upgrade, the new one will not go online
+  since it requires the ports that are in use by the older one. So you must manually
+  delete the older funcx-forwarder pod.
 
+  >> kubectl get pods
+  # Find the older funcx-forwarder pod
+
+  >> kubctl delete pods <NAME_OF_THE_OLDER_FUNCX_FORWARDER>
+
+  
 
