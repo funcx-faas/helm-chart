@@ -799,4 +799,8 @@ this is terrible and obscure and i only noticed it randomly in passing.
 > docker build --no-cache -t funcx-web-service  is my default
 ￼
 says yadu.
+ - this has gone into the helm-chart Makefile documentation already
+===
+
+===
 ===
