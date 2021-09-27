@@ -53,12 +53,12 @@ spec:
         {{- end }}
         ports:
           - containerPort: 8080  # Forwarder REST port
+          - containerPort: {{ .Values.forwarder.endpointBasePort }}
+            hostPort: {{ .Values.forwarder.endpointBasePort }}
           - containerPort: {{ add .Values.forwarder.endpointBasePort 1 }}
             hostPort: {{ add .Values.forwarder.endpointBasePort 1 }}
           - containerPort: {{ add .Values.forwarder.endpointBasePort 2 }}
             hostPort: {{ add .Values.forwarder.endpointBasePort 2 }}
-          - containerPort: {{ add .Values.forwarder.endpointBasePort 3 }}
-            hostPort: {{ add .Values.forwarder.endpointBasePort 3 }}
         {{- if .Values.forwarder.server_cert }}
         volumeMounts:
         - name: funcx-forwarder-secret
