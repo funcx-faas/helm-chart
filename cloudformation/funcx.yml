@@ -48,13 +48,22 @@ Parameters:
 
   RedisSnapshotName:
     Type: String
-    Description: 'The snapshot of the db to restore from'
+    Description: 'The snapshot of redis to restore from'
+
+  RedisName:
+    Type: String
+    Description: 'The name of redis cluster'
+
+  RedisNodeType:
+    Type: String
+    Description: 'The node type for redis'
+    Default: 'cache.r5.xlarge'
 
 Resources:
   ElastiCacheCacheCluster:
     Type: "AWS::ElastiCache::CacheCluster"
     Properties:
-      CacheNodeType: cache.t3.small
+      CacheNodeType: !Ref RedisNodeType
       SnapshotName: !Ref RedisSnapshotName
       Engine: redis
       EngineVersion: 6.x
@@ -67,7 +76,7 @@ Resources:
         - !Ref FromEksToRedis
       SnapshotRetentionLimit: 0
       SnapshotWindow: "03:00-04:00"
-      ClusterName: !Sub "funcx-${EnvName}-redis"
+      ClusterName: !Sub "funcx-${EnvName}-${RedisName}"
   ElastiCacheSubnetGroup:
     Type: AWS::ElastiCache::SubnetGroup
     Properties:
@@ -81,7 +90,7 @@ Resources:
     DeletionPolicy: Retain
     Properties:
       DBInstanceIdentifier: !Sub 'funcx-${EnvName}-db'
-      DBSnapshotIdentifier: !Ref DBSnapshotIdentifier
+      #DBSnapshotIdentifier: !Ref DBSnapshotIdentifier
       AllocatedStorage: '20'
       DBName: !Ref DBName
       DBInstanceClass: db.t3.micro
@@ -142,9 +151,9 @@ Resources:
       VpcId: !Ref VpcId
       SecurityGroupIngress:
         - SourceSecurityGroupId: !Ref FuncXNodeSG
-          FromPort: 5672
+          FromPort: 5671
           IpProtocol: tcp
-          ToPort: 5672
+          ToPort: 5671
   FromEksToRedis:
     Type: "AWS::EC2::SecurityGroup"
     Properties:
