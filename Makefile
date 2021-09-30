@@ -39,3 +39,10 @@ shutdown-local-cluster:
 	@echo "\n= shutdown local cluster\n"
 	helm uninstall funcx
 	@echo "\n= local cluster shutdown complete\n"
+
+.PHONY: lint
+lint:
+	pre-commit run -a
+.PHONY: test-local
+test-local:
+	pytest smoke_tests/ --funcx-config local
