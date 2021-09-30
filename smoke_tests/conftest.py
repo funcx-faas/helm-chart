@@ -16,16 +16,15 @@ from funcx.sdk.executor import FuncXExecutor
 #  this var starts with the ID env var load
 _LOCAL_ENDPOINT_ID = os.getenv("FUNCX_LOCAL_ENDPOINT_ID")
 
-_CONFIGS = [
-    {
-        "config_name": "PROD",
+_CONFIGS = {
+    "prod": {
         # By default tests are against production, which means we do not need to pass
         # any arguments to the client object (default will point at prod stack)
         "client_args": {},
         # assert versions are as expected on prod
-        "forwarder_version": "0.3.2",
-        "api_version": "0.3.2",
-        "funcx_version": "0.3.2",
+        "forwarder_version": "0.3.3",
+        "api_version": "0.3.3",
+        "funcx_version": "0.3.3",
         # This fn is public and searchable
         "public_hello_fn_uuid": "b0a5d1a0-2b22-4381-b899-ba73321e41e0",
         # Public tutorial endpoint
@@ -33,8 +32,7 @@ _CONFIGS = [
         # other endpoint to test
         "endpoint_uuid": _LOCAL_ENDPOINT_ID,
     },
-    {
-        "config_name": "LOCAL",
+    "local": {
         # localhost; typical defaults for a helm deploy
         "client_args": {
             "funcx_service_address": "http://localhost:5000/v2",
@@ -42,11 +40,7 @@ _CONFIGS = [
         },
         "endpoint_uuid": _LOCAL_ENDPOINT_ID,
     },
-]
-
-
-def _get_config(name):
-    return next(x for x in _CONFIGS if x["config_name"] == name)
+}
 
 
 def _get_local_endpoint_id():
@@ -66,10 +60,7 @@ def _get_local_endpoint_id():
 def pytest_addoption(parser):
     """Add funcx-specific command-line options to pytest."""
     parser.addoption(
-        "--funcx-local",
-        action="store_true",
-        default=False,
-        help="Use local testing config",
+        "--funcx-config", default="prod", help="Name of testing config to use"
     )
     parser.addoption(
         "--endpoint", metavar="endpoint", help="Specify an active endpoint UUID"
@@ -85,11 +76,14 @@ def pytest_addoption(parser):
 
 
 @pytest.fixture(scope="session")
-def funcx_test_config(pytestconfig):
+def funcx_test_config_name(pytestconfig):
+    return pytestconfig.getoption("--funcx-config")
+
+
+@pytest.fixture(scope="session")
+def funcx_test_config(pytestconfig, funcx_test_config_name):
     # start with basic config load
-    config = _get_config("PROD")
-    if pytestconfig.getoption("--funcx-local"):
-        config = _get_config("LOCAL")
+    config = _CONFIGS[funcx_test_config_name]
 
     # if `--endpoint` was passed or `endpoint_uuid` is present in config,
     # handle those cases

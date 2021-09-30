@@ -45,4 +45,4 @@ lint:
 	pre-commit run -a
 .PHONY: test-local
 test-local:
-	pytest smoke_tests/ --funcx-local
+	pytest smoke_tests/ --funcx-config local
