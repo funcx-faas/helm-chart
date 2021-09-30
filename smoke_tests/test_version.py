@@ -1,7 +1,7 @@
 import requests
 
 
-def test_web_service(fxc, endpoint, fxc_args):
+def test_web_service(fxc, endpoint, funcx_test_config):
     """This test checks 1) web-service is online, 2) version of the funcx-web-service"""
     service_address = fxc.funcx_service_address
 
@@ -13,13 +13,14 @@ def test_web_service(fxc, endpoint, fxc_args):
     )
 
     service_version = response.json()
-    api_version = fxc_args["api_version"]
-    assert (
-        service_version == api_version
-    ), f"Expected API version:{api_version}, got {service_version}"
+    api_version = funcx_test_config.get("api_version")
+    if api_version is not None:
+        assert (
+            service_version == api_version
+        ), f"Expected API version:{api_version}, got {service_version}"
 
 
-def test_forwarder(fxc, endpoint, fxc_args):
+def test_forwarder(fxc, endpoint, funcx_test_config):
     """This test checks 1) forwarder is online, 2) version of the forwarder"""
     service_address = fxc.funcx_service_address
 
@@ -31,10 +32,11 @@ def test_forwarder(fxc, endpoint, fxc_args):
     )
 
     forwarder_version = response.json()["forwarder"]
-    expected_version = fxc_args["forwarder_version"]
-    assert (
-        forwarder_version == expected_version
-    ), f"Expected Forwarder version:{expected_version}, got {forwarder_version}"
+    expected_version = funcx_test_config.get("forwarder_version")
+    if expected_version:
+        assert (
+            forwarder_version == expected_version
+        ), f"Expected Forwarder version:{expected_version}, got {forwarder_version}"
 
 
 def say_hello():
@@ -47,9 +49,9 @@ def test_simple_function(fxc):
     assert func_uuid is not None, "Invalid function uuid returned"
 
 
-def test_tutorial_ep_status(fxc, fxc_args):
+def test_ep_status(fxc, try_tutorial_endpoint):
     """Test whether the tutorial EP is online and reporting status"""
-    response = fxc.get_endpoint_status(fxc_args["tutorial_endpoint"])
+    response = fxc.get_endpoint_status(try_tutorial_endpoint)
 
     assert (
         response["status"] == "online"

@@ -43,3 +43,6 @@ shutdown-local-cluster:
 .PHONY: lint
 lint:
 	pre-commit run -a
+.PHONY: test-local
+test-local:
+	pytest smoke_tests/ --funcx-local

@@ -2,6 +2,31 @@
 
 Tools for handling local development workflow.
 
+## Linting
+
+This repo has pre-commit hooks configured with [pre-commit](pre-commit.com).
+They are optional, but recommended.
+
+Install with
+
+    pipx install pre-commit
+
+or your preferred method for installing python tools.
+
+Setup the pre-commit hooks with
+
+    pre-commit install
+
+from the repo root.
+
+You can run hooks manually with
+
+    make lint
+
+And you can skip hooks when committing (if ever needed) with
+
+    git commit --no-verify
+
 ## Local Dev Deployments
 
 There are two main actions supported by the Makefile in the repo root:
@@ -104,3 +129,9 @@ webService:
   image: funcx_web_service
   tag: develop
 ```
+
+## Running Local Tests
+
+On a running deployment, with port forwarding enabled, you can run tests with
+`pytest`. For information on installing an running the tests, see
+[the Smoke Tests README](../smoke_tests).
