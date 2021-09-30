@@ -39,3 +39,7 @@ shutdown-local-cluster:
 	@echo "\n= shutdown local cluster\n"
 	helm uninstall funcx
 	@echo "\n= local cluster shutdown complete\n"
+
+.PHONY: lint
+lint:
+	pre-commit run -a

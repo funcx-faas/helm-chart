@@ -6,10 +6,9 @@ def double(x):
 
 
 def test_executor_basic(fx, fxc_args):
-    """ Test executor interface
-    """
+    """Test executor interface"""
 
-    endpoint = fxc_args['tutorial_endpoint']
+    endpoint = fxc_args["tutorial_endpoint"]
     x = random.randint(0, 100)
     fut = fx.submit(double, x, endpoint_id=endpoint)
 
