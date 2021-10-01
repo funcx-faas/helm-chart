@@ -786,7 +786,9 @@ says yadu.
 
 https://github.com/funcx-faas/helm-chart/pull/36 (websockets installed from wrong tag)
 
-https://github.com/funcx-faas/funcX/issues/600   (relative-dupe of existing parsl issue)
+https://github.com/funcx-faas/helm-chart/pull/39 (tidy up suggested values documentation)
+
+https://github.com/funcx-faas/funcX/issues/600   (duplicate pod names - dupe of existing parsl issue)
 
 https://github.com/funcx-faas/funcX/issues/601 (broken k8s worker pods accumulate forever)
 
