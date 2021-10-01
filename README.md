@@ -140,29 +140,25 @@ kubectl create secret generic funcx-forwarder-secrets --from-file=.curve/server.
 3. Once the endpoint is registered to the newly deployed `funcx-forwarder`, make sure to check the `~/.funcx/<ENDPOINT_NAME>/certificates/server.key` file to confirm that the manually added key has been returned to the endpoint.
 
 
-## Values
+## Specifying more configuration values
 
-> :warning: **USE THE FOLLOWING deployed_values/values.yaml** Omit the
-> funcx_endpoint section if using an externally deployed endpoint.
+Default configuration values come from `funcx/values.yaml`. These can be
+overridden per-deployment by placing replacements in the non-version-controlled
+`deployed_values/values.yaml` - for example, the globusClient/globusKey values
+earlier in the install instructions.
+
+This is a recommended initial set of values to override:
 
 ``` yaml
 webService:
-  pullPolicy: Always
   globusClient: <GLOBUS_CLIENT_ID_STRING>
   globusKey: <GLOBUS_CLIENT_KEY_STRING>
-  tag: main
-
-websocketService:
-  pullPolicy: Always
-  tag: main
 
 # Note that we install numpy into the worker so that we can run tests against the local 
 # deployment
 # Note that the workerImage needs the same python version as is used in the funcx_endpoint 
-# image. This requirement will be relaxed
+# image.
 funcx_endpoint:
-  enabled: true
-  funcXServiceAddress: http://funcx-funcx-web-service:8000
   image:
     pullPolicy: Always
     tag: main
@@ -172,32 +168,13 @@ funcx_endpoint:
   workerInit: pip install funcx-endpoint==0.3.2 numpy
   workerImage: python:3.7-buster
 
-forwarder:
-  enabled: true
-  tag: main
-  pullPolicy: Always
-
-redis:
-  master:
-    service:
-      nodePort: 30379
-      type: NodePort
-
-postgresql:
-  service:
-    nodePort: 30432
-    type: NodePort
-
 rabbitmq:
   auth:
     erlangCookie: c00kie
   pullPolicy: Always
 ```
 
-### Additional config
-
-There are a few values that can be set to adjust the deployed system
-configuration
+Here are some values that can be overriden:
 
 | Value                          | Desciption                                                          | Default           |
 | ------------------------------ | ------------------------------------------------------------------- | ----------------- |
