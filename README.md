@@ -85,6 +85,10 @@ now can run:
 
 and see the default helm help text.
 
+TODO: is there a "hello world" style helm+kubernetes validation that could be run so
+that we can say "you need helm+kubernetes at least good enough to do this:"
+
+
 now get the funcx helm repo:
 
 mkdir src
@@ -189,9 +193,8 @@ yes, with lots of error messages to ignore, I did this:
 
 docker run --rm -ti funcx/kube-endpoint:main /home/funcx/boot.sh funcx
 
+but how then did I get the token out?
 )
-
-
 
 You will be prompted to follow the authorization link and paste the resulting
 token into the console. Once you do that, funcx-endpoint will create a
@@ -206,7 +209,7 @@ kubectl create secret generic funcx-sdk-tokens \
   --from-file ~/.funcx/credentials/funcx_sdk_tokens.json
 ```
 
-## Installing FuncX
+## Installing FuncX ["central services"? what's the right title vs the endpoint and client?]
 
 1. Make a clone of this repository
 2. Download subcharts:
