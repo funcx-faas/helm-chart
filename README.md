@@ -788,4 +788,6 @@ https://github.com/funcx-faas/helm-chart/pull/36 (websockets installed from wron
 
 https://github.com/funcx-faas/funcX/issues/600   (relative-dupe of existing parsl issue)
 
+https://github.com/funcx-faas/funcX/issues/601 (broken k8s worker pods accumulate forever)
+
 
