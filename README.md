@@ -762,27 +762,6 @@ eg make it consistent every time over restarts rather than random each time?
 or output it somewhere that cna be read programmatically by clients?
 
 
-### k8s endpoint worker names
-
-... are millisecond based, so I have seen two pods next to each otehr with the same name:
-
-# minikube kubectl get pods
-NAME                                            READY   STATUS    RESTARTS        AGE
-funcx-1632329996841                             1/1     Running   0               4m3s
-funcx-1632329998841                             1/1     Running   0               4m2s
-funcx-1632330007842                             1/1     Running   0               3m53s
-funcx-endpoint-86756c48c8-nc7r2                 1/1     Running   2 (10m ago)     12m
-funcx-forwarder-db744678c-6r9nq                 1/1     Running   0               12m
-funcx-funcx-web-service-6745bd4f5d-p59qc        1/1     Running   0               12m
-funcx-funcx-websocket-service-bb766fbcd-x82sg   1/1     Running   0               12m
-funcx-postgresql-0                              1/1     Running   0               12m
-funcx-rabbitmq-0                                1/1     Running   0               12m
-funcx-redis-master-0                            1/1     Running   0               12m
-funcx-redis-slave-0                             1/1     Running   0               12m
-funcx-redis-slave-1                             1/1     Running   0               12m
-plsql                                           1/1     Running   389 (22m ago)   16d
-
-
 ## websocket-service tag bug in helm chart
 
 uses 'latest' not 'main' which is weeks old at time of my writing
@@ -807,3 +786,10 @@ says yadu.
 
 ===
 ===
+
+
+# issues opened
+
+https://github.com/funcx-faas/funcX/issues/600   (relative-dupe of existing parsl issue)
+
+
