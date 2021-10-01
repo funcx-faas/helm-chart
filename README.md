@@ -762,12 +762,6 @@ eg make it consistent every time over restarts rather than random each time?
 or output it somewhere that cna be read programmatically by clients?
 
 
-## websocket-service tag bug in helm chart
-
-uses 'latest' not 'main' which is weeks old at time of my writing
-i am trying to switch to main
-
-
 ## web-service build (and check others?) has a requiremenets.txt which
 installs from git funcx api main
 
@@ -788,7 +782,9 @@ says yadu.
 ===
 
 
-# issues opened
+# PRs and issues opened
+
+https://github.com/funcx-faas/helm-chart/pull/36 (websockets installed from wrong tag)
 
 https://github.com/funcx-faas/funcX/issues/600   (relative-dupe of existing parsl issue)
 
