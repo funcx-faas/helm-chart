@@ -1,0 +1,26 @@
+{{- if .Values.containerService.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Release.Name }}-funcx-container-service
+spec:
+  replicas: {{ .Values.containerService.replicas }}
+  selector:
+    matchLabels:
+      app: {{ .Release.Name }}-funcx-container-service
+  template:
+    metadata:
+      labels:
+        app: {{ .Release.Name }}-funcx-container-service
+    spec:
+      containers:
+      - name: {{ .Release.Name }}-funcx-container-service
+        image: {{ .Values.containerService.image }}:{{ .Values.containerService.tag }}
+        tty: true
+        stdin: true
+        imagePullPolicy: {{ .Values.containerService.pullPolicy }}
+        {{- if .Values.containerService.resources }}
+        resources:
+{{ toYaml .Values.containerService.resources | indent 10 }}
+        {{- end }}
+{{- end }}
