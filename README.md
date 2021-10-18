@@ -779,6 +779,31 @@ says yadu.
 ===
 
 ===
+microk8s ingres (with ingress PR applied...)
+install microk8s ingress. this puts in a DaemonSet that launches the ingress controller.
+this needs editing:
+
+root@pearl:~# microk8s kubectl get daemonset -n ingress
+NAME                                DESIRED   CURRENT   READY   UP-TO-DATE   AVAILABLE   NODE SELECTOR   AGE
+nginx-ingress-microk8s-controller   1         1         1       1            1           <none>          12d
+
+~/kubectl edit daemonset nginx-ingress-microk8s-controller  -n ingress
+
+edit eg the container port (for @sirosen's use case, but not otherwise):
+          ports:
+          - containerPort: 80
+            hostPort: 81
+            name: http
+            protocol: TCP
+          - containerPort: 443
+            hostPort: 443
+            name: https
+            protocol: TCP
+
+and somewhere (perhaps the container args in that daemonset) remove the restriction on running 
+
+
+
 ===
 
 
