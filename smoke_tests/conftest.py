@@ -24,7 +24,6 @@ _CONFIGS = {
         # assert versions are as expected on prod
         "forwarder_version": "0.3.3",
         "api_version": "0.3.3",
-        "funcx_version": "0.3.3",
         # This fn is public and searchable
         "public_hello_fn_uuid": "b0a5d1a0-2b22-4381-b899-ba73321e41e0",
         # Public tutorial endpoint

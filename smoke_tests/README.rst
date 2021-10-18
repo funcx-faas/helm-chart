@@ -14,7 +14,6 @@ Here are the config options that **must** be updated per release:
 
 * forwarder_version
 * api_version
-* funcx_version
 
 Running tests
 -------------
