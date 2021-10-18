@@ -7,7 +7,8 @@ cluster:
 .PHONY: install-alb-controler
 install-alb-controler:
 	helm repo add eks https://aws.github.io/eks-charts
-	helm upgrade -i aws-load-balancer-controller --version 1.1.6 eks/aws-load-balancer-controller -n kube-system --set clusterName=funcx-$(ENVIRONMENT) --set serviceAccount.create=false --set serviceAccount.name=aws-load-balancer-controller --set region=us-east-1 --set vpcId=vpc-0d3b9f7c3a9c6c1ba
+	helm repo update eks
+	helm upgrade -i aws-load-balancer-controller --version 1.2.7 eks/aws-load-balancer-controller -n kube-system --set clusterName=funcx-$(ENVIRONMENT) --set serviceAccount.create=false --set serviceAccount.name=aws-load-balancer-controller --set region=us-east-1 --set vpcId=vpc-0d3b9f7c3a9c6c1ba
 
 .PHONY: install-fluentbit
 install-fluentbit:
