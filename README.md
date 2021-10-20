@@ -11,8 +11,8 @@ version]
 
 Non-goals:
 
-* Using the helm charts to deploy to the live/dev systems.
-* Customising your helm deploy.
+* Using the helm charts to deploy to the live/dev systems. [TODO: crossref to the actual notes for that]
+* Customising your helm deploy. [well, actually maybe that is a goal - but there are some notes in another file for that so they should be crosslinked]
 
 # About benc's notes
 
@@ -235,8 +235,8 @@ kubectl create secret generic funcx-sdk-tokens \
     ```
 6. You can access your web service through the ingress or via a port forward
 to the web service pod. Instructions are provided in the displayed notes.
-[what ingress? there is no ingress resource created by helm? talking about the
-'service' resource for these?] 
+[ingress should become the official way, and be better documented - it's what I've
+been working on]
 
 now i see a bunch of services including a funcx endpoint
 
@@ -806,6 +806,17 @@ and somewhere (perhaps the container args in that daemonset) remove the restrict
 
 ===
 
+# dockerfile endpoint in funcx vs python version
+should force choice of python rather than defaulting to some rando version that
+doesn't make sense:
+--- a/Dockerfile-endpoint
++++ b/Dockerfile-endpoint
+@@ -1,4 +1,5 @@
+-ARG PYTHON_VERSION="3.8"
++ARG PYTHON_VERSION
++# eg PYTHON_VERSION="3.8"
+
+
 
 # PRs and issues opened
 
@@ -816,5 +827,4 @@ https://github.com/funcx-faas/helm-chart/pull/39 (tidy up suggested values docum
 https://github.com/funcx-faas/funcX/issues/600   (duplicate pod names - dupe of existing parsl issue)
 
 https://github.com/funcx-faas/funcX/issues/601 (broken k8s worker pods accumulate forever)
-
 
