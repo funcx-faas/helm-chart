@@ -321,9 +321,36 @@ rest can safely be skipped:
   delete the older funcx-forwarder pod.
 
   >> kubectl get pods
-  # Find the older funcx-forwarder pod
+  \# Find the older funcx-forwarder pod
 
-  >> kubctl delete pods <NAME_OF_THE_OLDER_FUNCX_FORWARDER>
+  >> kubctl delete pods \<NAME_OF_THE_OLDER_FUNCX_FORWARDER\>
 
 
+## Deploy a temporary k8s deployment in the dev cluster
+
+It is occasionally useful to deploy a full FuncX stack in the dev cluster under
+a different namespace.  This is useful when two developers are both working on
+or debugging a feature as well as to verify a feature works as expected before
+potentially deploying to the main dev environment deployment.  These
+instructions will get a second FuncX deployment (with k8s based redis,
+postgres, and rabbitmq) running at a specified host under `*.api.dev.funcx.org`.
+
+* To avoid forwarder port conflicts, ensure at least as many nodes are running 
+  in EKS as there will be forwarder deployments since forwarders rely on host
+  ports to be addressable.  To scale the node group you can use `eksctl scale
+  nodegroup --cluster=funcx-dev --name=funcx-dev-node-group --nodes=2
+  --nodes-max=2` where `nodes-max` and `nodes` are set to as many as are needed.
+* Create a new namespace for your deployment: e.g. `kubectl create namespace josh-funcx` 
+* Create a `values.yaml` that includes information about the host name to use 
+  in the ingress definition.  E.g.:
+    ingress:
+      enabled: true
+      host: josh-test.dev.funcx.org
+      name: dev-lb
+      subnets: subnet-0c0d6b32bb57c39b2, subnet-0906da1c44cbe3b8d
+      use_alb: true
+* Install the helm chart as described above, but specifying the new `values.yaml` file 
+  and the namespace. E.g.: `helm install -f deployed_values/values.yaml josh-funcx funcx --namespace`
+* Create a new route53 record for the given host (josh-test.dev.funcx.org).  
+  We won't have to do this after [external dns](https://kubernetes-sigs.github.io/aws-load-balancer-controller/v2.2/guide/integrations/external_dns/) has been enabled.
 
