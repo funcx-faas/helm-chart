@@ -108,12 +108,62 @@ kubectl create secret generic funcx-sdk-tokens \
     ```shell script
     helm install -f deployed_values/values.yaml funcx funcx
     ```
-6. You can access your web service through the ingress or via a port forward
-to the web service pod. Instructions are provided in the displayed notes.
 
-7. You should be able to see the endpoint registering with the web service
+6. You should be able to see the endpoint registering with the web service
 in their respective logs, along with the forwarder log. Check the endpoint's
 logs for its ID. 
+
+## Exposing FuncX to external clients and endpoints
+
+You need to expose two ports from your cluster to clients. There are two ways:
+ingress and port-forward. These instructions talk about ingress, which is more
+complicated to set up but easier to maintain and closer to the production
+configuration. If you do not configure ingress, then the post-install notes
+output by `helm install` will tell you which port-forward commands to run.
+
+1. Install an ingress controller. Minikube and microk8s do this differently.
+
+1.a Minikube:
+
+Run this:
+
+```
+minikube addons enable ingress
+```
+
+1.b microk8s
+
+Run this:
+
+```
+microk8s enable ingress
+```
+
+Then configure microk8s to serve all namespaces. (by default, it only
+serves the `public` ingress class). [TODO: i need to write the exact commands for this]
+
+2. Get a hostname that your kubernetes install is accessible under.
+
+Depending on your development environment, this might be the public hostname of your
+kubernetes server, or it might be an entry in `/etc/hosts` pointing to 127.0.0.1.
+Maybe even `localhost` works in that case.
+
+3. Enable ingress in the funcx install
+
+Edit `deployed_values/values.yaml` to enable funcx ingress and to tell funcx the
+host name from step 2.
+
+```
+ingress:
+  enabled: true
+  host: amber.cqx.ltd.uk
+```
+
+4. Redeploy funcx
+
+```
+helm upgrade --atomic -f deployed_values/values.yaml funcx funcx
+```
 
 ### Forwarder Debugging
 
