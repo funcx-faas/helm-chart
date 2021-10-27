@@ -4,14 +4,18 @@ progress via the command
 
     kubectl get pods --namespace {{ .Release.Namespace }}
 
-To access the REST server you will need to run a Kubernetes Port-Forward:
-
 {{- if .Values.ingress.enabled -}}
 Your service will be waiting for you at http://{{ .Release.Name }}-funcx.{{ .Values.ingress.host }}
 {{- else }}
+To access the REST server, either enable ingress or run Kubernetes port-forward commands:
+
+For the web service:
+
   kubectl port-forward service/{{ .Release.Name }}-funcx-web-service 5000:8000
+
+For the websocket service:
+
+  kubectl port-forward service/{{ .Release.Name }}-funcx-websocket-service 6000:6000
 {{- end }}
 
 
-To access the websocket service you will need to run a Kubernetes Port-Forward:
-kubectl port-forward service/{{ .Release.Name }}-funcx-websocket-service 6000:6000
