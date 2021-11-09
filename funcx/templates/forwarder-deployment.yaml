@@ -48,6 +48,22 @@ spec:
           value: "{{ .Values.forwarder.resultsPort }}"
         - name: COMMANDS_PORT
           value: "{{ .Values.forwarder.commandsPort }}"
+
+        - name: AWS_ACCESS_KEY_ID
+          valueFrom:
+            secretKeyRef:
+              name: {{ .Values.storage.awsSecrets }}
+              key: AWS_ACCESS_KEY_ID
+        - name: AWS_SECRET_ACCESS_KEY
+          valueFrom:
+            secretKeyRef:
+              name: {{ .Values.storage.awsSecrets }}
+              key: AWS_SECRET_ACCESS_KEY
+
+        - name: S3_BUCKET_NAME
+          value: "{{ .Values.storage.s3Bucket }}"
+        - name: REDIS_STORAGE_THRESHOLD
+          value: "{{ .Values.storage.redisThreshold }}"
         tty: true
         stdin: true
         imagePullPolicy: {{ .Values.forwarder.pullPolicy }}

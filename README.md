@@ -206,6 +206,9 @@ Here are some values that can be overriden:
 | `services.redis.enabled`         | Deploy redis along with service?                             | true |
 | `services.redis.externalHost`  | If redis is deployed externally, what is the host name?    |  |
 | `services.redis.externalPort`  | If redis is deployed externally, what is the port?    |  6379 |
+| `storage.awsSecrets`           | Name of Kubernetes secret that holds the AWS credentials |    |
+| `storage.s3Bucket`             | S3 bucket where storage will write results and payloads | funcx |
+| `storage.redisThreshold`       | Threshold to switch large results to S3 from redis (in bytes) | 20000 |
 
 
 ## Sealed Secrets
@@ -224,6 +227,22 @@ cat local-dev-secrets.yaml | \
         --controller-name sealed-secrets \
         --format yaml > local-dev-sealed-secrets.yaml
 ```
+
+## AWS Secrets for S3 Storage
+If you are using S3 storage, you will need to provide AWS credentials via a
+secret. These secrets can be installed into your cluster by creating a yaml file
+like
+```yaml
+apiVersion: v1
+kind: Secret
+metadata:
+  name: mysecret
+type: Opaque
+data:
+  AWS_ACCESS_KEY_ID: <<base64 encoded access key>>
+  AWS_SECRET_ACCESS_KEY: <<base64 encoded secret>>
+```
+
 
 ## Subcharts
 This chart uses two subcharts to supply dependent services. You can update
