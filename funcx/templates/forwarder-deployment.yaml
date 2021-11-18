@@ -59,6 +59,11 @@ spec:
             secretKeyRef:
               name: {{ .Values.storage.awsSecrets }}
               key: AWS_SECRET_ACCESS_KEY
+        - name: AWS_SESSION_TOKEN
+          valueFrom:
+            secretKeyRef:
+              name: {{ .Values.storage.awsSecrets }}
+              key: AWS_SESSION_TOKEN
 
         - name: S3_BUCKET_NAME
           value: "{{ .Values.storage.s3Bucket }}"
