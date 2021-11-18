@@ -229,6 +229,23 @@ cat local-dev-secrets.yaml | \
 ```
 
 ## AWS Secrets for S3 Storage
+
+The globus accounts need a role change before you get the keys, before your default
+account usually doesn't come with many privileges. Here are some of the steps to
+get your keys:
+
+```bash
+
+# First get the target role ARN
+role_arn=$(aws configure get 'profile.funcx.role_arn')
+
+# Now get the temporary creds for the role:
+aws sts assume-role --role-arn $role_arn --role-session-name Test1
+
+# Now convert the keys to base64 with :
+echo -n "SECRET_KEY" | base64
+# Pay attention to the -n flag to ensure that the encoded string doesn't include a trailing /n
+
 If you are using S3 storage, you will need to provide AWS credentials via a
 secret. These secrets can be installed into your cluster by creating a yaml file
 like
@@ -241,6 +258,11 @@ type: Opaque
 data:
   AWS_ACCESS_KEY_ID: <<base64 encoded access key>>
   AWS_SECRET_ACCESS_KEY: <<base64 encoded secret>>
+  AWS_SESSION_TOKEN: |-
+    <<base64
+    encoded
+    multiline
+    session_token>>
 ```
 
 
