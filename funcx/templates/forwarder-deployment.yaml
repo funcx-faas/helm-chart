@@ -49,6 +49,7 @@ spec:
         - name: COMMANDS_PORT
           value: "{{ .Values.forwarder.commandsPort }}"
 
+    {{- if .Values.storage.awsSecrets }}
         - name: AWS_ACCESS_KEY_ID
           valueFrom:
             secretKeyRef:
@@ -64,6 +65,7 @@ spec:
             secretKeyRef:
               name: {{ .Values.storage.awsSecrets }}
               key: AWS_SESSION_TOKEN
+    {{- end }}
 
         - name: FUNCX_S3_BUCKET_NAME
           value: "{{ .Values.storage.s3Bucket }}"
