@@ -231,24 +231,11 @@ cat local-dev-secrets.yaml | \
 ## AWS Secrets for S3 Storage
 
 The globus accounts need a role change before you get the keys, before your default
-account usually doesn't come with many privileges. Here are some of the steps to
-get your keys:
+account usually doesn't come with many privileges. The script below fetches your keys and
+creates yaml file that can be installed into your cluster:
 
-```bash
+Example yaml for references:
 
-# First get the target role ARN
-role_arn=$(aws configure get 'profile.funcx.role_arn')
-
-# Now get the temporary creds for the role:
-aws sts assume-role --role-arn $role_arn --role-session-name Test1
-
-# Now convert the keys to base64 with :
-echo -n "SECRET_KEY" | base64
-# Pay attention to the -n flag to ensure that the encoded string doesn't include a trailing /n
-
-If you are using S3 storage, you will need to provide AWS credentials via a
-secret. These secrets can be installed into your cluster by creating a yaml file
-like
 ```yaml
 apiVersion: v1
 kind: Secret
@@ -263,6 +250,36 @@ data:
     encoded
     multiline
     session_token>>
+```
+
+```bash
+
+# First get the target role ARN
+role_arn=$(aws configure get 'profile.funcx.role_arn')
+echo "Role Arn: $role_arn"
+
+temp_creds=".creds.tmp"
+AWS_PROFILE=funcx aws sts assume-role --role-arn $role_arn --role-session-name Test1 --output text &> $temp_creds
+
+access_key_id=$(grep CREDENTIALS $temp_creds | cut -f2 | xargs echo -n | base64)
+secret_key=$(grep CREDENTIALS $temp_creds | cut -f4 | xargs echo -n | base64)
+session_token=$(grep CREDENTIALS $temp_creds | cut -f5 | xargs echo -n | base64 | sed 's/^/    /')
+
+
+cat <<EOF > secret.token.yaml
+apiVersion: v1
+kind: Secret
+metadata:
+  name: mysecret
+type: Opaque
+data:
+  AWS_ACCESS_KEY_ID: $access_key_id
+  AWS_SECRET_ACCESS_KEY: $secret_key
+  AWS_SESSION_TOKEN: |-
+$session_token
+EOF
+
+rm $temp_creds
 ```
 
 
