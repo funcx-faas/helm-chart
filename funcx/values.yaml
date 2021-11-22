@@ -9,6 +9,10 @@ ingress:
   enabled: false
   host: uc.ssl-hep.org
 
+storage:
+  s3Bucket: funcx
+  redisThreshold: 20000
+  awsSecrets:
 webService:
   image: funcx/web-service
   tag: main

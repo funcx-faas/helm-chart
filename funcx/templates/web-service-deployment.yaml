@@ -47,6 +47,28 @@ spec:
               key: externalPostgresURI
       {{- end }}
     {{- end }}
+    {{- if .Values.storage.awsSecrets }}
+        - name: AWS_ACCESS_KEY_ID
+          valueFrom:
+            secretKeyRef:
+              name: {{ .Values.storage.awsSecrets }}
+              key: AWS_ACCESS_KEY_ID
+        - name: AWS_SECRET_ACCESS_KEY
+          valueFrom:
+            secretKeyRef:
+              name: {{ .Values.storage.awsSecrets }}
+              key: AWS_SECRET_ACCESS_KEY
+        - name: AWS_SESSION_TOKEN
+          valueFrom:
+            secretKeyRef:
+              name: {{ .Values.storage.awsSecrets }}
+              key: AWS_SESSION_TOKEN
+    {{- end }}
+
+        - name: FUNCX_S3_BUCKET_NAME
+          value: "{{ .Values.storage.s3Bucket }}"
+        - name: FUNCX_REDIS_STORAGE_THRESHOLD
+          value: "{{ .Values.storage.redisThreshold }}"
 
         tty: true
         stdin: true

@@ -206,6 +206,9 @@ Here are some values that can be overriden:
 | `services.redis.enabled`         | Deploy redis along with service?                             | true |
 | `services.redis.externalHost`  | If redis is deployed externally, what is the host name?    |  |
 | `services.redis.externalPort`  | If redis is deployed externally, what is the port?    |  6379 |
+| `storage.awsSecrets`           | Name of Kubernetes secret that holds the AWS credentials |    |
+| `storage.s3Bucket`             | S3 bucket where storage will write results and payloads | funcx |
+| `storage.redisThreshold`       | Threshold to switch large results to S3 from redis (in bytes) | 20000 |
 
 
 ## Sealed Secrets
@@ -224,6 +227,61 @@ cat local-dev-secrets.yaml | \
         --controller-name sealed-secrets \
         --format yaml > local-dev-sealed-secrets.yaml
 ```
+
+## AWS Secrets for S3 Storage
+
+The globus accounts need a role change before you get the keys, before your default
+account usually doesn't come with many privileges. The script below fetches your keys and
+creates yaml file that can be installed into your cluster:
+
+Example yaml for references:
+
+```yaml
+apiVersion: v1
+kind: Secret
+metadata:
+  name: mysecret
+type: Opaque
+data:
+  AWS_ACCESS_KEY_ID: <<base64 encoded access key>>
+  AWS_SECRET_ACCESS_KEY: <<base64 encoded secret>>
+  AWS_SESSION_TOKEN: |-
+    <<base64
+    encoded
+    multiline
+    session_token>>
+```
+
+```bash
+
+# First get the target role ARN
+role_arn=$(aws configure get 'profile.funcx.role_arn')
+echo "Role Arn: $role_arn"
+
+temp_creds=".creds.tmp"
+AWS_PROFILE=funcx aws sts assume-role --role-arn $role_arn --role-session-name Test1 --output text &> $temp_creds
+
+access_key_id=$(grep CREDENTIALS $temp_creds | cut -f2 | xargs echo -n | base64)
+secret_key=$(grep CREDENTIALS $temp_creds | cut -f4 | xargs echo -n | base64)
+session_token=$(grep CREDENTIALS $temp_creds | cut -f5 | xargs echo -n | base64 | sed 's/^/    /')
+
+
+cat <<EOF > secret.token.yaml
+apiVersion: v1
+kind: Secret
+metadata:
+  name: mysecret
+type: Opaque
+data:
+  AWS_ACCESS_KEY_ID: $access_key_id
+  AWS_SECRET_ACCESS_KEY: $secret_key
+  AWS_SESSION_TOKEN: |-
+$session_token
+EOF
+
+rm $temp_creds
+```
+
 
 ## Subcharts
 This chart uses two subcharts to supply dependent services. You can update
