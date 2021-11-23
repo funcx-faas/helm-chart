@@ -12,6 +12,9 @@ spec:
       labels:
         app: {{ .Release.Name }}-funcx-websocket-service
     spec:
+      serviceAccountName: funcx-service
+      securityContext:
+        fsGroup: 1000
       containers:
       - name: {{ .Release.Name }}-funcx-websocket-service
         image: {{ .Values.websocketService.image }}:{{ .Values.websocketService.tag }}

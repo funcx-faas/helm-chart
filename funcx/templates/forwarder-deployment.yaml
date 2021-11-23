@@ -13,6 +13,7 @@ spec:
       labels:
         app: {{ .Release.Name }}-forwarder
     spec:
+      serviceAccountName: funcx-service
       hostNetwork: true
       containers:
       - name: {{ .Release.Name }}-forwarder

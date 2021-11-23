@@ -33,6 +33,16 @@ iam:
       wellKnownPolicies:
         awsLoadBalancerController: true
         certManager: true
+    - metadata:
+        name: funcx-service
+        namespace: default
+      attachPolicy:
+        Version: "2012-10-17"
+        Statement:
+          - Sid: VisualEditor1
+            Effect: Allow
+            Action: s3:*
+            Resource: arn:aws:s3:::funcx-dev-task-storage/*
 
 addons:
   - name: vpc-cni

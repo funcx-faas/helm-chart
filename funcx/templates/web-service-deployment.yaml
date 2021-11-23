@@ -12,6 +12,9 @@ spec:
       labels:
         app: {{ .Release.Name }}-funcx-web-service
     spec:
+      serviceAccountName: funcx-service
+      securityContext:
+        fsGroup: 1000
     {{- if .Values.services.postgres.enabled }}
       initContainers:
       - name: check-postgresql
