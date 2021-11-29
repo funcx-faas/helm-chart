@@ -41,7 +41,10 @@ iam:
         Statement:
           - Sid: VisualEditor1
             Effect: Allow
-            Action: s3:*
+            Action: 
+              - s3:PutObject
+              - s3:GetObject
+              - s3:ListObject
             Resource: arn:aws:s3:::funcx-prod-task-storage/*
 
 addons:
