@@ -174,3 +174,7 @@ Resources:
       Users:
         - Username: !Ref RabbitMQUsername
           Password: !Ref RabbitMQPassword
+  FuncXTaskStorage:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub 'funcx-${EnvName}-task-storage'
