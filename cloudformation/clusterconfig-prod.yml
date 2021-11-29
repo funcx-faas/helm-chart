@@ -39,7 +39,7 @@ iam:
       attachPolicy:
         Version: "2012-10-17"
         Statement:
-          - Sid: VisualEditor1
+          - Sid: S3Access
             Effect: Allow
             Action: 
               - s3:PutObject
