@@ -18,6 +18,8 @@ spec:
         image: {{ .Values.containerService.image }}:{{ .Values.containerService.tag }}
         tty: true
         stdin: true
+        ports:
+          - containerPort: 5000
         imagePullPolicy: {{ .Values.containerService.pullPolicy }}
         {{- if .Values.containerService.resources }}
         resources:

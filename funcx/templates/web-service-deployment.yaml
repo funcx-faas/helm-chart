@@ -12,9 +12,11 @@ spec:
       labels:
         app: {{ .Release.Name }}-funcx-web-service
     spec:
-      serviceAccountName: funcx-service
+      {{- if .Values.storage.s3ServiceAccount }}
+      serviceAccountName: {{- .Values.storage.s3ServiceAccount }}
       securityContext:
         fsGroup: 1000
+      {{- end }}
     {{- if .Values.services.postgres.enabled }}
       initContainers:
       - name: check-postgresql
