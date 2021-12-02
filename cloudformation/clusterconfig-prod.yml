@@ -52,8 +52,8 @@ addons:
 
 nodeGroups:
   - name: funcx-prod-node-group
-    instanceType: t3.medium
-    desiredCapacity: 1
+    instanceType: c5.large
+    desiredCapacity: 2
     volumeSize: 20
     ssh:
       publicKeyName: funcx-eks
