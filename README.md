@@ -255,16 +255,26 @@ data:
 ```bash
 
 # First get the target role ARN
-role_arn=$(aws configure get 'profile.funcx.role_arn')
+
+# assuming that you are using assume-role configuration in ~/.aws/config , you
+# can get this from your current profile's role_arn value
+# if you are not using assume-role to access the account where you intend to
+# access an S3, these steps may vary
+role_arn=$(aws configure get 'role_arn')
 echo "Role Arn: $role_arn"
 
-temp_creds=".creds.tmp"
-AWS_PROFILE=funcx aws sts assume-role --role-arn $role_arn --role-session-name Test1 --output text &> $temp_creds
 
-access_key_id=$(grep CREDENTIALS $temp_creds | cut -f2 | xargs echo -n | base64)
-secret_key=$(grep CREDENTIALS $temp_creds | cut -f4 | xargs echo -n | base64)
-session_token=$(grep CREDENTIALS $temp_creds | cut -f5 | xargs echo -n | base64 | sed 's/^/    /')
+# parse sts assume-role output into a shell array (works in bash, zsh)
+# you can `echo "${credarr[1]}"` to see the access key, for example
+credarr=("$(aws sts assume-role \
+    --role-arn "$role_arn" --role-session-name test1 \
+    --query 'Credentials.[AccessKeyId,SecretAccessKey,SessionToken]' \
+    --output text | tr '\t' '\n')")
 
+# base64 encode these credentials
+access_key_id=$(echo -n "${credarr[1]}" | base64)
+secret_key=$(echo -n "${credarr[2]}" | base64)
+session_token=$(echo -n "${credarr[3]}" | base64)
 
 cat <<EOF > secret.token.yaml
 apiVersion: v1
@@ -276,10 +286,8 @@ data:
   AWS_ACCESS_KEY_ID: $access_key_id
   AWS_SECRET_ACCESS_KEY: $secret_key
   AWS_SESSION_TOKEN: |-
-$session_token
+    $session_token
 EOF
-
-rm $temp_creds
 ```
 
 
