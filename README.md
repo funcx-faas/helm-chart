@@ -209,6 +209,7 @@ Here are some values that can be overriden:
 | `storage.awsSecrets`           | Name of Kubernetes secret that holds the AWS credentials |    |
 | `storage.s3Bucket`             | S3 bucket where storage will write results and payloads | funcx |
 | `storage.redisThreshold`       | Threshold to switch large results to S3 from redis (in bytes) | 20000 |
+| `storage.s3ServiceAccount`     | Kubernetes Service Account to use for accessing AWS access tokens (blank to skip service account) | <blank> |
 
 
 ## Sealed Secrets

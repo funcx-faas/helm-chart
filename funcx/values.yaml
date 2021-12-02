@@ -13,6 +13,8 @@ storage:
   s3Bucket: funcx
   redisThreshold: 20000
   awsSecrets:
+  s3ServiceAccount:
+
 webService:
   image: funcx/web-service
   tag: main

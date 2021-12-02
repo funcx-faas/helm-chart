@@ -13,7 +13,9 @@ spec:
       labels:
         app: {{ .Release.Name }}-forwarder
     spec:
-      serviceAccountName: funcx-service
+      {{- if .Values.storage.s3ServiceAccount }}
+      serviceAccountName: {{- .Values.storage.s3ServiceAccount }}
+      {{- end }}
       hostNetwork: true
       containers:
       - name: {{ .Release.Name }}-forwarder

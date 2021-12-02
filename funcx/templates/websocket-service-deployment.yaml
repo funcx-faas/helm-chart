@@ -12,9 +12,11 @@ spec:
       labels:
         app: {{ .Release.Name }}-funcx-websocket-service
     spec:
-      serviceAccountName: funcx-service
+      {{- if .Values.storage.s3ServiceAccount }}
+      serviceAccountName: {{- .Values.storage.s3ServiceAccount }}
       securityContext:
         fsGroup: 1000
+      {{- end }}
       containers:
       - name: {{ .Release.Name }}-funcx-websocket-service
         image: {{ .Values.websocketService.image }}:{{ .Values.websocketService.tag }}
