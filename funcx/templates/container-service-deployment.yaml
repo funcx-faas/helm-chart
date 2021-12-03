@@ -16,6 +16,10 @@ spec:
       containers:
       - name: {{ .Release.Name }}-funcx-container-service
         image: {{ .Values.containerService.image }}:{{ .Values.containerService.tag }}
+        env:
+          - name: WEBSERVICE_URL
+            value: "http://{{ .Release.Name }}-funcx-web-service:8000"
+
         tty: true
         stdin: true
         ports:
