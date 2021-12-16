@@ -14,7 +14,7 @@ spec:
         app: {{ .Release.Name }}-forwarder
     spec:
       {{- if .Values.storage.s3ServiceAccount }}
-      serviceAccountName: {{- .Values.storage.s3ServiceAccount }}
+      serviceAccountName: {{ .Values.storage.s3ServiceAccount }}
       {{- end }}
       hostNetwork: true
       containers:

@@ -13,7 +13,7 @@ spec:
         app: {{ .Release.Name }}-funcx-websocket-service
     spec:
       {{- if .Values.storage.s3ServiceAccount }}
-      serviceAccountName: {{- .Values.storage.s3ServiceAccount }}
+      serviceAccountName: {{ .Values.storage.s3ServiceAccount }}
       securityContext:
         fsGroup: 1000
       {{- end }}
