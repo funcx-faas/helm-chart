@@ -365,7 +365,7 @@ rest can safely be skipped:
     * Make sure the right cluster is pointed to by kubectl, and use this terminal for all following steps.
 
 * Download the current values deployed to the target cluster as a backup.
-    >> kubectl get values
+    >> helm get values funcx
 
 * Update the values to use the release branchnames as the new tags
 
