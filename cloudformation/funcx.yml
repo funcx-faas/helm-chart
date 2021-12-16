@@ -151,9 +151,9 @@ Resources:
       VpcId: !Ref VpcId
       SecurityGroupIngress:
         - SourceSecurityGroupId: !Ref FuncXNodeSG
-          FromPort: 5672
+          FromPort: 5671
           IpProtocol: tcp
-          ToPort: 5672
+          ToPort: 5671
   FromEksToRedis:
     Type: "AWS::EC2::SecurityGroup"
     Properties:

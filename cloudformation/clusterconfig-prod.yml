@@ -45,7 +45,7 @@ iam:
               - s3:PutObject
               - s3:GetObject
               - s3:ListObject
-            Resource: arn:aws:s3:::funcx-prod-task-storage/*
+            Resource: arn:aws:s3:::funcx-production-task-storage/*
 
 addons:
   - name: vpc-cni
