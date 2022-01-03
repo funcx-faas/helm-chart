@@ -335,12 +335,7 @@ Here are the components that need updating as part of a release, in the order th
 due to dependencies. Note that only components that have changes for release need to updated and the
 rest can safely be skipped:
 
-* funcx-common (Once @sirosen's changes are merged, the component below will need this component to be updated first)
-    * Update version number
-    * [Optional?] Release changes to Pypi
-
 * funcx-forwarder
-    * Update requirements to use latest funcx-common
     * Update version number
     * merge above changes to main in a PR
     * Create a branch off of main with the version number, for, eg: 'v0.3.3'.
