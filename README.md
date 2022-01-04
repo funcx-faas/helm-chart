@@ -89,6 +89,7 @@ kubectl create secret generic funcx-sdk-tokens \
 ```
 
 ## Installing FuncX
+0. Update cloudformation stack if necessary
 1. Make a clone of this repository
 2. Download subcharts:
     ```shell script

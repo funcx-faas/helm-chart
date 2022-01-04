@@ -50,12 +50,21 @@ Parameters:
     Type: String
     Description: 'The snapshot of the db to restore from'
 
+  RedisNodeType:
+    Type: String
+    Description: 'The node type for redis'
+    Default: 'cache.r5.2xlarge'
+
+  RedisName:
+    Type: String
+    Description: 'The name of redis cluster'
+
 Resources:
   ElastiCacheCacheCluster:
     Type: "AWS::ElastiCache::CacheCluster"
     Properties:
-      CacheNodeType: cache.t3.small
-      SnapshotName: !Ref RedisSnapshotName
+      CacheNodeType: !Ref RedisNodeType
+      # SnapshotName: !Ref RedisSnapshotName
       Engine: redis
       EngineVersion: 6.x
       NumCacheNodes: 1
@@ -67,7 +76,7 @@ Resources:
         - !Ref FromEksToRedis
       SnapshotRetentionLimit: 0
       SnapshotWindow: "03:00-04:00"
-      ClusterName: !Sub "funcx-${EnvName}-redis"
+      ClusterName: !Sub "funcx-${EnvName}-${RedisName}"
   ElastiCacheSubnetGroup:
     Type: AWS::ElastiCache::SubnetGroup
     Properties:
@@ -81,7 +90,7 @@ Resources:
     DeletionPolicy: Retain
     Properties:
       DBInstanceIdentifier: !Sub 'funcx-${EnvName}-db'
-      DBSnapshotIdentifier: !Ref DBSnapshotIdentifier
+      # DBSnapshotIdentifier: !Ref DBSnapshotIdentifier
       AllocatedStorage: '20'
       DBName: !Ref DBName
       DBInstanceClass: db.t3.micro
@@ -92,7 +101,7 @@ Resources:
       BackupRetentionPeriod: 7
       PreferredMaintenanceWindow: "fri:09:31-fri:10:01"
       MultiAZ: false
-      EngineVersion: "12.5"
+      EngineVersion: "12"
       AutoMinorVersionUpgrade: true
       LicenseModel: postgresql-license
       PubliclyAccessible: true
@@ -142,9 +151,9 @@ Resources:
       VpcId: !Ref VpcId
       SecurityGroupIngress:
         - SourceSecurityGroupId: !Ref FuncXNodeSG
-          FromPort: 5672
+          FromPort: 5671
           IpProtocol: tcp
-          ToPort: 5672
+          ToPort: 5671
   FromEksToRedis:
     Type: "AWS::EC2::SecurityGroup"
     Properties:
