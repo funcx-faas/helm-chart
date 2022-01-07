@@ -22,7 +22,7 @@ dependencies:
     repository: https://charts.bitnami.com/bitnami
     condition: services.rabbitmq.enabled
   - name: funcx_endpoint
-    version: 0.2.*
+    version: 0.3.*
     repository: http://funcx.org/funcx-helm-charts
     condition: endpoint.enabled
 
