@@ -39,6 +39,8 @@ spec:
     {{- else }}
           value: "{{  .Values.services.rabbitmq.externalURI }}"
     {{- end }}
+        - name: RABBITMQ_QUEUE_TTL
+          value: "{{  .Values.services.rabbitmq.queueTTL }}"
     {{- if not .Values.forwarder.useAWSMetadataServer }}
         - name: ADVERTISED_FORWARDER_ADDRESS
           valueFrom:
