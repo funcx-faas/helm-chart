@@ -5,8 +5,11 @@ dependencies:
 - name: redis
   repository: https://charts.bitnami.com/bitnami
   version: 10.7.17
+- name: rabbitmq
+  repository: https://charts.bitnami.com/bitnami
+  version: 8.11.6
 - name: funcx_endpoint
   repository: http://funcx.org/funcx-helm-charts
-  version: 0.2.1
-digest: sha256:fe88632baaff536312aad31bf6924ec230efd307069fd5cee585c9a1e8728cad
-generated: "2021-05-10T11:48:56.654623-05:00"
+  version: 0.3.4
+digest: sha256:b738634a576632650fd711ec622dcbf636b00b9c3254ab96ad1f7e6d895ebfe1
+generated: "2022-01-07T22:20:06.709346829Z"
