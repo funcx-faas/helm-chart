@@ -66,7 +66,8 @@ services:
   rabbitmq:
     enabled: true
     externalHost: rabbitmq
-    queueTTL: 60
+    # TTL in seconds
+    queueTTL: 604800
 
 postgresql:
   postgresqlUsername: funcx
