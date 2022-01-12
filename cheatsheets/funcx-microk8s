@@ -1,0 +1,9 @@
+## Use thsi sheet for commands for microk8s ##
+
+# set kube config to use microk8s
+# (assuming you didn't rename the microk8s context)
+kubectl config use-context microk8s
+
+# pull an image into the microk8s registry
+docker save funcx_web_service > funcx_web_service.tar
+microk8s ctr image import funcx_web_service.tar
