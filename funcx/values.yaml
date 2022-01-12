@@ -90,6 +90,47 @@ rabbitmq:
     password: rabbitmq
   persistence:
     enabled: false
+  extraSecrets:
+    load-definition:
+      load_definition.json: |
+        {
+          "users": [
+            {
+              "name": "funcx",
+              "password": "rabbitmq",
+              "tags": "administrator"
+            }
+          ],
+          "vhosts": [
+            {
+              "name": "/"
+            }
+          ],
+          "permissions": [
+            {
+              "user": "funcx",
+              "vhost": "/",
+              "configure":".*",
+              "write":".*",
+              "read":".*"
+            }
+          ],
+          "policies": [
+            {
+              "vhost": "/",
+              "name": "expiry",
+              "pattern": ".*",
+              "apply-to": "queues",
+              "definition": {"expires": 60000},
+              "priority": 0
+            }
+          ]
+        }
+  loadDefinition:
+    enabled: true
+    existingSecret: load-definition
+  extraConfiguration: |
+    load_definitions = /app/load_definition.json
 
 websocketService:
   image: funcx/funcx-websocket-service
