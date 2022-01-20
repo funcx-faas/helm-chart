@@ -38,7 +38,9 @@ data:
     DB_PASSWORD = "{{ .Values.postgresql.postgresqlPassword }}"
     DB_HOST = "{{ .Release.Name }}-postgresql"
 
+    {{- if .Values.forwarder.enabled }}
     FORWARDER_IP = "{{ .Release.Name }}-forwarder"
+    {{- end }}
 
     {{- if .Values.containerService.enabled }}
     CONTAINER_SERVICE_ENABLED = True
