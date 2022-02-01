@@ -33,6 +33,7 @@ iam:
       wellKnownPolicies:
         awsLoadBalancerController: true
         certManager: true
+        externalDNS: true
     - metadata:
         name: funcx-service
         namespace: default
