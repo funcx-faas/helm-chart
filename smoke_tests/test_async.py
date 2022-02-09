@@ -1,5 +1,5 @@
-import random
 import asyncio
+import random
 
 
 def squared(x):
@@ -14,7 +14,6 @@ async def simple_task(fxc, endpoint):
     assert result == squared(x), "Got wrong answer"
 
 
-def test_simple(async_fxc, fxc_args):
-    """ Testing basic async functionality
-    """
-    async_fxc.loop.run_until_complete(simple_task(async_fxc, fxc_args['tutorial_endpoint']))
+def test_simple(async_fxc, try_tutorial_endpoint):
+    """Testing basic async functionality"""
+    async_fxc.loop.run_until_complete(simple_task(async_fxc, try_tutorial_endpoint))

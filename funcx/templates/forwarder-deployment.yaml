@@ -13,6 +13,9 @@ spec:
       labels:
         app: {{ .Release.Name }}-forwarder
     spec:
+      {{- if .Values.storage.s3ServiceAccount }}
+      serviceAccountName: {{ .Values.storage.s3ServiceAccount }}
+      {{- end }}
       hostNetwork: true
       containers:
       - name: {{ .Release.Name }}-forwarder
@@ -48,6 +51,33 @@ spec:
           value: "{{ .Values.forwarder.resultsPort }}"
         - name: COMMANDS_PORT
           value: "{{ .Values.forwarder.commandsPort }}"
+
+    {{- if  .Values.storage.awsSecrets }}
+        - name: AWS_ACCESS_KEY_ID
+          valueFrom:
+            secretKeyRef:
+              name: {{ .Values.storage.awsSecrets }}
+              key: AWS_ACCESS_KEY_ID
+        - name: AWS_SECRET_ACCESS_KEY
+          valueFrom:
+            secretKeyRef:
+              name: {{ .Values.storage.awsSecrets }}
+              key: AWS_SECRET_ACCESS_KEY
+        - name: AWS_SESSION_TOKEN
+          valueFrom:
+            secretKeyRef:
+              name: {{ .Values.storage.awsSecrets }}
+              key: AWS_SESSION_TOKEN
+    {{- end }}
+
+    {{- if  .Values.storage.s3Bucket }}
+        - name: FUNCX_S3_BUCKET_NAME
+          value: "{{ .Values.storage.s3Bucket }}"
+    {{- end }}
+    {{- if  .Values.storage.redisThreshold }}
+        - name: FUNCX_REDIS_STORAGE_THRESHOLD
+          value: "{{ .Values.storage.redisThreshold }}"
+    {{- end }}
         tty: true
         stdin: true
         imagePullPolicy: {{ .Values.forwarder.pullPolicy }}

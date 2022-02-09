@@ -39,3 +39,10 @@ data:
     DB_HOST = "{{ .Release.Name }}-postgresql"
 
     FORWARDER_IP = "{{ .Release.Name }}-forwarder"
+
+    {{- if .Values.containerService.enabled }}
+    CONTAINER_SERVICE_ENABLED = True
+    CONTAINER_SERVICE = "http://{{ .Release.Name }}-funcx-container-service:8000"
+    {{- else }}
+    CONTAINER_SERVICE_ENABLED = False
+    {{- end }}

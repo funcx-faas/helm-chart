@@ -9,6 +9,12 @@ ingress:
   enabled: false
   host: uc.ssl-hep.org
 
+storage:
+  s3Bucket: funcx
+  redisThreshold: 20000
+  awsSecrets:
+  s3ServiceAccount:
+
 webService:
   image: funcx/web-service
   tag: main
@@ -39,6 +45,13 @@ forwarder:
   tasksPort: 55001
   resultsPort: 55002
   commandsPort: 55003
+
+containerService:
+  enbabled: false
+  image: funcx/container-service
+  tag: restore_docker_push
+  pullPolicy: IfNotPresent
+  replicas: 1
 
 # External services - these should be included for development environment
 # but on EKS we usually use the Amazon supported services

@@ -1,0 +1,23 @@
+name: build
+on:
+  push:
+  pull_request:
+
+# TODO: look into adding a `test` job which runs a "local" helm deploy in GH Actions
+# and tests the result with smoke tests
+jobs:
+  lint:
+    name: "Run Linting"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Setup Python
+        uses: actions/setup-python@v2
+        with:
+          python-version: 3.9
+      - name: Setup Helm
+        uses: azure/setup-helm@v1
+      - name: Install pre-commit
+        run: python -m pip install -U pre-commit
+      - name: Run Linting
+        run: pre-commit run --all-files

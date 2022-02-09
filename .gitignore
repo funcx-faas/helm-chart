@@ -1,2 +1,5 @@
 .idea/
 deployed_values/
+*.log
+*.pyc
+__pycache__/

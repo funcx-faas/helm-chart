@@ -211,6 +211,8 @@ kubectl create secret generic funcx-sdk-tokens \
 
 ## Installing FuncX ["central services"? what's the right title vs the endpoint and client?]
 
+0. Update cloudformation stack if necessary
+
 1. Make a clone of this repository
 2. Download subcharts:
     ```shell script
@@ -437,6 +439,13 @@ in their worker_init.
 
 it's frustrating that the python version is not set to the version that
 is actually used by the endpoint.
+||||||| merged common ancestors
+### Database Setup
+Until we migrate the webservice to use an ORM, we need to set the database
+schema up using a SQL script. This is accomplished by an init-container that
+is run prior to starting up the web service container. This setup image checks
+to see if the tables are there. If not, it runs the setup script.
+
 ### Forwarder Debugging
 
 > :warning: *Only for debugging*: You can set the forwarder curve server key manually by creating
@@ -462,10 +471,14 @@ kubectl create secret generic funcx-forwarder-secrets --from-file=.curve/server.
 3. Once the endpoint is registered to the newly deployed `funcx-forwarder`, make sure to check the `~/.funcx/<ENDPOINT_NAME>/certificates/server.key` file to confirm that the manually added key has been returned to the endpoint.
 
 
-## Values
+## Specifying more configuration values
 
-> :warning: **USE THE FOLLOWING deployed_values/values.yaml** Omit the
-> funcx_endpoint section if using an externally deployed endpoint.
+Default configuration values come from `funcx/values.yaml`. These can be
+overridden per-deployment by placing replacements in the non-version-controlled
+`deployed_values/values.yaml` - for example, the globusClient/globusKey values
+earlier in the install instructions.
+
+This is a recommended initial set of values to override:
 
 should I use the following values.yaml or the values.yaml I was told to make earlier?
 dedupe - and if this section is the values.yaml i should be using, move it up to
@@ -475,22 +488,14 @@ eg. why do I need to be exposing postgres to the internet?
 
 ``` yaml
 webService:
-  pullPolicy: Always
   globusClient: <GLOBUS_CLIENT_ID_STRING>
   globusKey: <GLOBUS_CLIENT_KEY_STRING>
-  tag: main
-
-websocketService:
-  pullPolicy: Always
-  tag: main
 
 # Note that we install numpy into the worker so that we can run tests against the local 
 # deployment
 # Note that the workerImage needs the same python version as is used in the funcx_endpoint 
-# image. This requirement will be relaxed [give an issue url for tracking this or remove the promise/dream. it is barely relevant to config docs]
+# image.
 funcx_endpoint:
-  enabled: true
-  funcXServiceAddress: http://funcx-funcx-web-service:8000
   image:
     pullPolicy: Always
     tag: main
@@ -499,22 +504,6 @@ funcx_endpoint:
   minBlocks: 2
   workerInit: pip install funcx-endpoint==0.3.2 numpy
   workerImage: python:3.7-buster
-
-forwarder:
-  enabled: true
-  tag: main
-  pullPolicy: Always
-
-redis:
-  master:
-    service:
-      nodePort: 30379
-      type: NodePort
-
-postgresql:
-  service:
-    nodePort: 30432
-    type: NodePort
 
 rabbitmq:
   auth:
@@ -528,6 +517,8 @@ deployed_values/values.yaml?]
 
 There are a few values that can be set to adjust the deployed system
 configuration
+
+Here are some values that can be overriden:
 
 | Value                          | Desciption                                                          | Default           |
 | ------------------------------ | ------------------------------------------------------------------- | ----------------- |
@@ -559,6 +550,10 @@ configuration
 | `services.redis.enabled`         | Deploy redis along with service?                             | true |
 | `services.redis.externalHost`  | If redis is deployed externally, what is the host name?    |  |
 | `services.redis.externalPort`  | If redis is deployed externally, what is the port?    |  6379 |
+| `storage.awsSecrets`           | Name of Kubernetes secret that holds the AWS credentials |    |
+| `storage.s3Bucket`             | S3 bucket where storage will write results and payloads | funcx |
+| `storage.redisThreshold`       | Threshold to switch large results to S3 from redis (in bytes) | 20000 |
+| `storage.s3ServiceAccount`     | Kubernetes Service Account to use for accessing AWS access tokens (blank to skip service account) | <blank> |
 
 
 ## Sealed Secrets
@@ -578,6 +573,69 @@ cat local-dev-secrets.yaml | \
         --controller-name sealed-secrets \
         --format yaml > local-dev-sealed-secrets.yaml
 ```
+
+## AWS Secrets for S3 Storage
+
+The globus accounts need a role change before you get the keys, before your default
+account usually doesn't come with many privileges. The script below fetches your keys and
+creates yaml file that can be installed into your cluster:
+
+Example yaml for references:
+
+```yaml
+apiVersion: v1
+kind: Secret
+metadata:
+  name: mysecret
+type: Opaque
+data:
+  AWS_ACCESS_KEY_ID: <<base64 encoded access key>>
+  AWS_SECRET_ACCESS_KEY: <<base64 encoded secret>>
+  AWS_SESSION_TOKEN: |-
+    <<base64
+    encoded
+    multiline
+    session_token>>
+```
+
+```bash
+
+# First get the target role ARN
+
+# assuming that you are using assume-role configuration in ~/.aws/config , you
+# can get this from your current profile's role_arn value
+# if you are not using assume-role to access the account where you intend to
+# access an S3, these steps may vary
+role_arn=$(aws configure get 'role_arn')
+echo "Role Arn: $role_arn"
+
+
+# parse sts assume-role output into a shell array (works in bash, zsh)
+# you can `echo "${credarr[1]}"` to see the access key, for example
+credarr=("$(aws sts assume-role \
+    --role-arn "$role_arn" --role-session-name test1 \
+    --query 'Credentials.[AccessKeyId,SecretAccessKey,SessionToken]' \
+    --output text | tr '\t' '\n')")
+
+# base64 encode these credentials
+access_key_id=$(echo -n "${credarr[1]}" | base64)
+secret_key=$(echo -n "${credarr[2]}" | base64)
+session_token=$(echo -n "${credarr[3]}" | base64)
+
+cat <<EOF > secret.token.yaml
+apiVersion: v1
+kind: Secret
+metadata:
+  name: mysecret
+type: Opaque
+data:
+  AWS_ACCESS_KEY_ID: $access_key_id
+  AWS_SECRET_ACCESS_KEY: $secret_key
+  AWS_SESSION_TOKEN: |-
+    $session_token
+EOF
+```
+
 
 ## Subcharts
 This chart uses two subcharts to supply dependent services. You can update
@@ -827,4 +885,96 @@ https://github.com/funcx-faas/helm-chart/pull/39 (tidy up suggested values docum
 https://github.com/funcx-faas/funcX/issues/600   (duplicate pod names - dupe of existing parsl issue)
 
 https://github.com/funcx-faas/funcX/issues/601 (broken k8s worker pods accumulate forever)
+
+
+
+## Deployment/Release Guide
+
+
+The following is an incomplete guide to deploying a new release onto our development or production clusters.
+
+Here are the components that need updating as part of a release, in the order they should be updated
+due to dependencies. Note that only components that have changes for release need to updated and the
+rest can safely be skipped:
+
+* funcx-forwarder
+    * Update version number
+    * merge above changes to main in a PR
+    * Create a branch off of main with the version number, for, eg: 'v0.3.3'.
+      For dev releases, do alpha releases `v0.3.3a0`
+    * Ensure that the branch has the CI tests passing and the publish step working
+
+* funcx-web-service
+    * Same steps as funcx-forwarder
+
+* funcx-websocket-service
+    * Same steps as funcx-websocket-service
+
+* Update helm-charts
+    * Update the smoke-tests in the helm-charts to use the new version numbers in `conftest.py`
+
+* Prepare to deploy to cluster.
+    * Confirm that all the bits to be deployed should be available on dockerhub.
+    * Run `kubectl config current-context` which should return something like:
+
+    >> arn:aws:eks:us-east-1:512084481048:cluster/funcx-dev
+
+    * Make sure the right cluster is pointed to by kubectl, and use this terminal for all following steps.
+
+* Download the current values deployed to the target cluster as a backup. Note: you can use this as a base values.yaml.
+    >> helm get values funcx > enviornment.yaml
+
+* Update the values to use the release branchnames as the new tags
+
+* Deploy with:
+    >> helm upgrade -f prod-values.yaml funcx funcx
+
+> :warning: It is preferable to upgrade rather than blow away the current deployment and redeploy
+    because, wiping the current deployment loses state that ties the Route53 entries to point at
+    the ALB, and any configuration on the ALB itself could be lost.
+
+> :warning: If the deployment was wiped here are the steps:
+    * Go to Route53 on AWS Console and select the hosted zone: `dev.funcx.org`. Select the
+      appropriate A record for the deployment you are updating and edit the record to update the
+      value to something like `dualstack.k8s-default-funcxfun-dd14845f35-608065658.us-east-1.elb.amazonaws.com.`
+    * Add the ALB to the existing WAF Rules here: `https://console.aws.amazon.com/wafv2/homev2/web-acl/funcx-prod-web-acl/d82023f9-2cd8-4aed-b8e3-460dd399f4b0/overview?region=us-east-1#`
+
+
+* While a new forwarder will be launched on upgrade, the new one will not go online
+  since it requires the ports that are in use by the older one. So you must manually
+  delete the older funcx-forwarder pod.
+
+  >> kubectl get pods
+  \# Find the older funcx-forwarder pod
+
+  >> kubctl delete pods \<NAME_OF_THE_OLDER_FUNCX_FORWARDER\>
+
+
+## Deploy a temporary k8s deployment in the dev cluster
+
+It is occasionally useful to deploy a full FuncX stack in the dev cluster under
+a different namespace.  This is useful when two developers are both working on
+or debugging a feature as well as to verify a feature works as expected before
+potentially deploying to the main dev environment deployment.  These
+instructions will get a second FuncX deployment (with k8s based redis,
+postgres, and rabbitmq) running at a specified host under `*.api.dev.funcx.org`.
+
+* To avoid forwarder port conflicts, ensure at least as many nodes are running 
+  in EKS as there will be forwarder deployments since forwarders rely on host
+  ports to be addressable.  To scale the node group you can use `eksctl scale
+  nodegroup --cluster=funcx-dev --name=funcx-dev-node-group --nodes=2
+  --nodes-max=2` where `nodes-max` and `nodes` are set to as many as are needed.
+* Create a new namespace for your deployment: e.g. `kubectl create namespace josh-funcx` 
+* Create a `values.yaml` that includes information about the host name to use 
+  in the ingress definition.  E.g.:
+    ingress:
+      enabled: true
+      host: josh-test.dev.funcx.org
+      name: dev-lb
+      subnets: subnet-0c0d6b32bb57c39b2, subnet-0906da1c44cbe3b8d
+      use_alb: true
+* Install the helm chart as described above, but specifying the new `values.yaml` file 
+  and the namespace. E.g.: `helm install -f deployed_values/values.yaml josh-funcx funcx --namespace`
+* Create a new route53 record for the given host (josh-test.dev.funcx.org).  
+  We won't have to do this after [external dns](https://kubernetes-sigs.github.io/aws-load-balancer-controller/v2.2/guide/integrations/external_dns/) has been enabled.
 
