@@ -1,4 +1,5 @@
 {{- if .Values.containerService.enabled }}
+
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -13,15 +14,40 @@ spec:
       labels:
         app: {{ .Release.Name }}-funcx-container-service
     spec:
+      volumes:
+      - name: dockersocket
+        hostPath:
+          path: /var/run/docker.sock
+          type: Socket
+
+      initContainers:
+      - name: docker-socket-permissions
+        image: alpine:3
+        command: ["sh", "-c", "chmod 666 /var/run/docker.sock"]
+        volumeMounts:
+          - name: dockersocket
+            mountPath: /var/run/docker.sock
+
       containers:
-      - name: {{ .Release.Name }}-funcx-container-service
+      - name: funcx-container-service
         image: {{ .Values.containerService.image }}:{{ .Values.containerService.tag }}
         env:
           - name: WEBSERVICE_URL
             value: "http://{{ .Release.Name }}-funcx-web-service:8000"
+          - name: REGISTRY_USERNAME
+            value: "{{ .Values.containerService.registryUserName }}"
+          - name: REGISTRY_PWD
+            value: "{{ .Values.containerService.registryPassword }}"
+          - name: REGISTRY_URL
+            value: "{{ .Values.containerService.registryURL }}"
+
 
         tty: true
         stdin: true
+        volumeMounts:
+          - name: dockersocket
+            mountPath: /var/run/docker.sock
+
         ports:
           - containerPort: 5000
         imagePullPolicy: {{ .Values.containerService.pullPolicy }}
