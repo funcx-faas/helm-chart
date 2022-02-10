@@ -49,9 +49,12 @@ forwarder:
 containerService:
   enbabled: false
   image: funcx/container-service
-  tag: restore_docker_push
+  tag: dev
   pullPolicy: IfNotPresent
   replicas: 1
+  registryUserName: ""
+  registryPassword: ""
+  registryURL: "https://index.docker.io/v1/"
 
 # External services - these should be included for development environment
 # but on EKS we usually use the Amazon supported services
