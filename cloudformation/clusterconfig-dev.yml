@@ -88,6 +88,11 @@ nodeGroups:
         albIngress: true
         cloudWatch: true
     preBootstrapCommands:
+        # This is needed to allow repo2docker to build inside a kubernetes
+        # pod. Without it, the build fails because the AWS DNS Server won't
+        # allow the weird internal IP address access.
+        # From:
+        #    https://discourse.jupyter.org/t/binder-deployed-in-aws-eks-domain-name-resolution-errors/766/11
         # Replicate what --enable-docker-bridge does in /etc/eks/bootstrap.sh
         # Enabling the docker bridge network. We have to disable live-restore as it
         # prevents docker from recreating the default bridge network on restart
