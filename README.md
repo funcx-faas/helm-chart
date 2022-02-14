@@ -1,18 +1,15 @@
-# helm-chart
-Helm Chart for Deploying funcX stack
+# A Chart for Deploying the funcX stack
 
-# About this document
+# Who is this README for?
 
-Goal: Getting started guide for a new funcX developer
-making their first install for themselves to hack on.
-[so there should be a prefered main path with minimal
-choices for customisation of the initial install - eg proper defaults for python
-version]
+This README is aimed at people who want to deploy funcX services into
+kubernetes.
 
-Non-goals:
+The main part of the text is aimed at a new funcX developer making their
+first install for themselves to hack on.
 
-* Using the helm charts to deploy to the live/dev systems. [TODO: crossref to the actual notes for that]
-* Customising your helm deploy. [well, actually maybe that is a goal - but there are some notes in another file for that so they should be crosslinked]
+Other notes on the way talk about how the install can be made in the
+production system at AWS, and in development environments hosted at AWS.
 
 # About benc's notes
 
@@ -1025,4 +1022,10 @@ postgres, and rabbitmq) running at a specified host under `*.api.dev.funcx.org`.
   and the namespace. E.g.: `helm install -f deployed_values/values.yaml josh-funcx funcx --namespace`
 * Create a new route53 record for the given host (josh-test.dev.funcx.org).  
   We won't have to do this after [external dns](https://kubernetes-sigs.github.io/aws-load-balancer-controller/v2.2/guide/integrations/external_dns/) has been enabled.
+
+
+
+## See also
+
+More notes in the local_dev/ subdirectory that should be merged into this file
 
