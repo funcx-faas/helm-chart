@@ -163,7 +163,9 @@ kubectl create secret generic funcx-sdk-tokens \
       document: should I just have the three lines mentioned here? or should I
       be copy-pasting a huge example?]
    [TODO: paragraph desribing what values.yaml will do]
-4. Obtain Globus Client ID and Secret. Get the credentials by asking on the
+
+
+3a. Obtain Globus Client ID and Secret. Get the credentials by asking on the
    `dev` funcx Slack channel.
 
    Once you have your credentials, paste them into your `values.yaml`:
@@ -177,6 +179,20 @@ kubectl create secret generic funcx-sdk-tokens \
    that is settled, can reuse deleted text, and elaborate:
    These secrets need to exist in the correct Globus Auth app. 
    ]
+
+3b. Configure endpoint UUID:
+
+    First generate a UUID, for example, by running `uuidgen` or `cat /proc/sys/kernel/random/uuid`.
+
+    Do not copy someone elses UUID from their example configuration. All kinds of subtle identity
+    problems will happen if you do.
+
+    Paste the UUID into your values.yaml in an endpoint section:
+
+    ```
+    funcx_endpoint:
+        endpointUUID: XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX
+    ```
 
 5. Install the helm chart:
     ```shell script
@@ -282,13 +298,15 @@ helm upgrade --atomic -f deployed_values/values.yaml funcx funcx
 
 ### Connecting clients
 
-Create a `FuncXClient` instance pointing at your install, by specifying the funcx_service_address:
+Create a `FuncXClient` instance pointing at your install, by specifying the funcx_service_address,
 
 ```
 fxc = FuncXClient(funcx_service_address="http://amber.cqx.ltd.uk:8000/v2")
 ```
 
-and then run the same sort of tests as can happen against the tutorial endpoint. For example:
+and by specifying your endpoint UUID (generated earlier) when invoking a function.
+
+Run the same sort of tests as can happen against the tutorial endpoint. For example:
 
 ```
 from funcx.sdk.client import FuncXClient
@@ -300,7 +318,7 @@ def hello_world():
 
 func_uuid = fxc.register_function(hello_world)
 
-tutorial_endpoint = 'LOCAL ENDPOINT HERE'
+tutorial_endpoint = 'YOUR-ENDPOINT-UUID-HERE'
 result = fxc.run(endpoint_id=tutorial_endpoint, function_id=func_uuid)
 
 print(fxc.get_result(result))
