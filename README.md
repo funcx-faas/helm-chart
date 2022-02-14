@@ -267,27 +267,7 @@ logs for its ID.
 
 7. You can access your funcX services through the ingress or via a port forward
 to the web service pod. For port forwarding, instructions are provided in the displayed notes.
-[ingress should become the official way, and be better documented, but there is less
-experience with it and it needs an ingress controller...]
-
-
-[clarify which logs / *where* those logs are? explicitly which (3?) logs to
-look at... - who is registering with whom?]
-
-Endpoint log will look like:
-```
-2021-09-14 16:36:02 endpoint.endpoint_manager:172 [INFO]  Starting endpoint with uuid: cfd389f3-4eda-413b-af95-4d54a8e944dc
-```
-
-forwarder will look like:
-```
-{"asctime": "2021-09-14 18:20:44,535", "name": "funcx_forwarder.forwarder", "levelname": "DEBUG", "message": "endpoint_status_message", "log_type": "endpoint_status_message", "endpoint_id": "cfd389f3-4eda-413b-af95-4d54a8e944dc", "endpoint_status_message": {"_payload": null, "_header": "b'\\xcf\\xd3\\x89\\xf3N\\xdaA;\\xaf\\x95MT\\xa8\\xe9D\\xdc'", "ep_status": {"task_id": -2, "info": {"total_cores": 0, "total_mem": 0, "new_core_hrs": 0, "total_core_hrs": 0, "managers": 0, "active_managers": 0, "total_workers": 0, "idle_workers": 0, "pending_tasks": 0, "outstanding_tasks": {}, "worker_mode": "no_container", "scheduler_mode": "hard", "scaling_enabled": true, "mem_per_worker": null, "cores_per_worker": 1.0, "prefetch_capacity": 10, "max_blocks": 100, "min_blocks": 1, "max_workers_per_node": 1, "nodes_per_block": 1}}, "task_statuses": {}}}
-```
-
-web service will look like:
-```
-{"asctime": "2021-09-14 16:36:03,273", "name": "funcx_web_service", "levelname": "INFO", "message": "Successfully registered cfd389f3-4eda-413b-af95-4d54a8e944dc in database"}
-```
+Ingress configuration is described in the following section.
 
 ## Exposing FuncX to external clients and endpoints
 
@@ -382,144 +362,6 @@ print(fxc.get_result(result))
 
 If you have got this far, then you have successfully installed the current
 version of funcx, and can begin to hack.
-
-
-[TODO: at this point I got into a lot of tangle with default Python versions
-not matching up. We've subsequently talked and fiddled with this - so check
-what will happen. In the meantime skip these notes:
-
-this gets as far as submitting for me, but attempts to get the result always give
-funcx.utils.errors.TaskPending: Task is pending due to waiting-for-nodes
-
-There's a pod started up ok - called funcx-1631645705407 without any more interesting name. i guess thats a worker? after 106s all that is in the logs is a warning from pip running as root
-- but i can see pip running.
-
-So i should put a note here about how long things might take here?
-Note that it has changes from waiting-for-ep in the error to waiting-for-nodes
-after several minutes, so there is more stuff going on, slowly... 5m later and its still churning. it's had one restart 63s ago... nothing clear about *why* it restarted though.
-in kubectl describe pod XXXXX I can see the commandline - a pip install and then a funcx-manager.
-It seems to end with: PROCESS_WORKER_POOL main event loop exiting normally
-
-So lets debug a bit more about where the task execution happens or not.
-
-Is this doing a pip install on every restart (?!) - that's a question to ask.
-(maybe it's not actually installing new stuff though - which is why i'm not seeing any
-packages being installed on subsequent runs)
-
-Eventually it went into "CrashLoopBackOff" at the kubernetes level, which maybe isn't the right behaviour for "exiting normal" at the PROCESS_WORKER_POOL level? Ask on chat about that.
-
-There's nothing in the endpoint logs about starting up that funcx process worker container, or about jobs happening - just every 600s a keepalive message
-
-Digging into the endpoint container environment, find ~/.funcx/funcx/EndpointInterchange.log
-which is reporting a sequence of errors:
-
-2021-09-15 14:26:55.592 funcx_endpoint.executors.high_throughput.executor:540 [WARNING]  [MTHR
-EAD] Executor shutting down due to version mismatch in interchange
-2021-09-15 14:26:55.610 funcx_endpoint.executors.high_throughput.executor:542 [ERROR]  [MTHREA
-D] Exception: Task failure due to loss of manager b'18e00d57935c'
-NoneType: None
-2021-09-15 14:26:55.610 funcx_endpoint.executors.high_throughput.executor:577 [INFO]  [MTHREAD
-] queue management worker finished
-
-then every 10ms this message *forever* 2021-09-15 14:26:55.613 funcx_endpoint:504 [ERROR]  [MAIN] Something broke while forwarding re
-sults from executor to forwarder queues
-Traceback (most recent call last):
-  File "/usr/local/lib/python3.7/site-packages/funcx_endpoint/endpoint/interchange.py", line 4
-90, in _main_loop
-    results = self.results_passthrough.get(False, 0.01)
-  File "/usr/local/lib/python3.7/multiprocessing/queues.py", line 108, in get
-    res = self._recv_bytes()
-  File "/usr/local/lib/python3.7/multiprocessing/connection.py", line 216, in recv_bytes
-    buf = self._recv_bytes(maxlength)
-  File "/usr/local/lib/python3.7/multiprocessing/connection.py", line 407, in _recv_bytes
-    buf = self._recv(4)
-  File "/usr/local/lib/python3.7/multiprocessing/connection.py", line 383, in _recv
-    raise EOFError
-EOFError
-
-- that kind of failure should be resulting in a kubernetes level restart (or some other exit/restart) not a hang loop like this?
-- mismatch of what? between who? is it the process worker pool container vs the funcx container?  Looking at interchange.py - this might not even be from a version mismatch: it can happen if reg_flag is false (due to a json deserialisation problem in registration message). Other than that, it can happen because the python versions from the manager vs the interchange.
-
-I commented on these logs not being obvious, in slack, and ben g gave me:
-> so for debugging, I added a value to the endpoint helm chart detachEndpoint -since the endpoint runs in a daemon, the output doesn’t show up in the pod’s logs.. Setting this to false means the endpoint runs in the main thread. Less reliable, but easy for debugging
-
-I haven't tried that yet. But if its good, then... if k8s endpoints are also expected for end users, maybe they should also get the same functionality? (eg why is this running as a daemon when its inside a pod anyway managing that?)
-
-whle the task on the client side still reports:
-funcx.utils.errors.TaskPending: Task is pending due to waiting-for-ep
-
-At the same time, the process worker service repeatedly exits and is restarted by kubernetes (with it eventually hitting CrashLoopBackOff to slow this down) - presumably that's somehow opposite half of this same error message, but it isn't clear. The entire log file is:
-
-root@amber:~# minikube kubectl logs -- funcx-1631715998878
-WARNING: Running pip as the 'root' user can result in broken permissions and conflicting behaviour with the system package manager. It is recommended to use a virtual environment instead: https://pip.pypa.io/warnings/venv
-PROCESS_WORKER_POOL main event loop exiting normally
-root@amber:~# 
-
-I found a more interesting log file here:
-/home/funcx/.funcx/funcx/HighThroughputExecutor/worker_logs/8e8f66c705d3/manager.log
-
-which eventully reports a critical error that the interchange heartbeat is missing - not at all like the kubectl log error of: ... exiting normally.
-
-It's a bit weird to be 2 minutes in before the manager even notices that the interchange isn't even alive.
-
-So... the version mismatch:
-This is invoking python:3.6-buster - so let's track down where that was.
-
-Selecting the correct image (eg for AWS AMIs, not docker images) has been a massive
-usability problem for testing parsl on image based systems... I'm not sure how much it
-matters in end-use though, if you're assuming that users make app-specific images that
-are tied to their own environment? I don't have experience there.  I haven't spent any
-time seriously trying to solve this for parsl, but eg ZZ did container stuff for parsl
-so I'd be interested to here any of his relevant experiences. not really a  problem
-i am interested in solving.
-
-so grep around in the source tree for python:3.6-buster
-
-The funcx endpoint helm chart is coming from a URL on funcx.org, not the helm-charts repo,
-under here: http://funcx.org/funcx-helm-charts
-
-There's a 0.3 chart in the funcx-helm-charts repo by the looks of it - perhaps I can try that, by hacking at the server-side chart. What's the right way to be controlling this?
-
-While checking if process claims to be alive, the endpoint output line:
-"funcx-endpoint process is still alive. Next check in 600s." 
-should be given a timestamp - it doesn't seem to go through the logging mechanism so
-is not getting a timestamp that way. So I have no idea when it last ran, or if its
-an outdated message, etc.
-
-This command to install the worker inside the worker container is installing funcx-endpoint and directing the output to a file called =0.2.0. That is probably not what is intended. Put the whole thing in ' marks perhaps.
-
-      pip install funcx-endpoint>=0.2.0
-
-This is in the funcx endpoint helm chart... along with the naughty command right next
-to it:
-workerImage and 
-workerInit
-so I should be able to override those myself in my values.yaml?
-
-funcx_endpoint:
-  workerImage: python:3.7-buster
-  workerInit: 'pip install "funcx-endpoint>=0.2.0"'
-
-note that workerInit is embedded python string syntax, not a plain string, so
-you can't use ' marks inside it because it is substituted in somewhere I think
-and that causes a syntax error - eg try the above line with " and ' swapped
-and see:
-"""
-File "/home/funcx/.funcx/funcx/config.py", line 24
-    worker_init='pip install 'funcx-endpoint>=0.2.0'',
-                                  ^
-SyntaxError: invalid syntax
-"""
-because string substitution into source without proper escaping.
-
-This could be fixed - either by reading the string from a different place and
-not doing python source substitution, or by performing escaping on the string.
-This behaviour is likely to cause trouble to anyone doing non-trivial bash
-in their worker_init.
-
-it's frustrating that the python version is not set to the version that
-is actually used by the endpoint.
-]
 
 ### Forwarder Debugging
 
@@ -754,7 +596,292 @@ root@plsql:/# pgcli postgresql://funcx:leftfoot1@funcx-postgresql:5432/public
 ingress section above
 ]
 
-# General benc grumbles to address
+
+## Making a release and deploying to the AWS clusters
+
+The following is an incomplete guide to making and deploying a new release onto our development or production clusters.
+
+Here are the components that need updating as part of a release, in the order they should be updated
+due to dependencies. Note that only components that have changes for release need to updated and the
+rest can safely be skipped:
+
+* funcx-forwarder
+    * Update version number
+    * merge above changes to main in a PR
+    * Create a branch off of main with the version number, for, eg: 'v0.3.3'.
+      For dev releases, do alpha releases `v0.3.3a0`
+    * Ensure that the branch has the CI tests passing and the publish step working
+
+* funcx-web-service
+    * Same steps as funcx-forwarder
+
+* funcx-websocket-service
+    * Same steps as funcx-websocket-service
+
+* Update helm-charts
+    * Update the smoke-tests in the helm-charts to use the new version numbers in `conftest.py`
+
+* Prepare to deploy to cluster.
+    * Confirm that all the bits to be deployed should be available on dockerhub.
+    * Run `kubectl config current-context` which should return something like:
+
+    >> arn:aws:eks:us-east-1:512084481048:cluster/funcx-dev
+
+    * Make sure the right cluster is pointed to by kubectl, and use this terminal for all following steps.
+
+* Download the current values deployed to the target cluster as a backup. Note: you can use this as a base values.yaml.
+    >> helm get values funcx > enviornment.yaml
+
+* Update the values to use the release branchnames as the new tags
+
+* Deploy with:
+    >> helm upgrade -f prod-values.yaml funcx funcx
+
+> :warning: It is preferable to upgrade rather than blow away the current deployment and redeploy
+    because, wiping the current deployment loses state that ties the Route53 entries to point at
+    the ALB, and any configuration on the ALB itself could be lost.
+
+> :warning: If the deployment was wiped here are the steps:
+    * Go to Route53 on AWS Console and select the hosted zone: `dev.funcx.org`. Select the
+      appropriate A record for the deployment you are updating and edit the record to update the
+      value to something like `dualstack.k8s-default-funcxfun-dd14845f35-608065658.us-east-1.elb.amazonaws.com.`
+    * Add the ALB to the existing WAF Rules here: `https://console.aws.amazon.com/wafv2/homev2/web-acl/funcx-prod-web-acl/d82023f9-2cd8-4aed-b8e3-460dd399f4b0/overview?region=us-east-1#`
+
+
+* While a new forwarder will be launched on upgrade, the new one will not go online
+  since it requires the ports that are in use by the older one. So you must manually
+  delete the older funcx-forwarder pod.
+
+  >> kubectl get pods
+  \# Find the older funcx-forwarder pod
+
+  >> kubctl delete pods \<NAME_OF_THE_OLDER_FUNCX_FORWARDER\>
+
+
+## Deploy a temporary k8s deployment in the dev cluster
+
+It is occasionally useful to deploy a full FuncX stack in the dev cluster under
+a different namespace.  This is useful when two developers are both working on
+or debugging a feature as well as to verify a feature works as expected before
+potentially deploying to the main dev environment deployment.  These
+instructions will get a second FuncX deployment (with k8s based redis,
+postgres, and rabbitmq) running at a specified host under `*.api.dev.funcx.org`.
+
+* To avoid forwarder port conflicts, ensure at least as many nodes are running 
+  in EKS as there will be forwarder deployments since forwarders rely on host
+  ports to be addressable.  To scale the node group you can use `eksctl scale
+  nodegroup --cluster=funcx-dev --name=funcx-dev-node-group --nodes=2
+  --nodes-max=2` where `nodes-max` and `nodes` are set to as many as are needed.
+* Create a new namespace for your deployment: e.g. `kubectl create namespace josh-funcx` 
+* Create a `values.yaml` that includes information about the host name to use 
+  in the ingress definition.  E.g.:
+    ingress:
+      enabled: true
+      host: josh-test.dev.funcx.org
+      name: dev-lb
+      subnets: subnet-0c0d6b32bb57c39b2, subnet-0906da1c44cbe3b8d
+      use_alb: true
+* Install the helm chart as described above, but specifying the new `values.yaml` file 
+  and the namespace. E.g.: `helm install -f deployed_values/values.yaml josh-funcx funcx --namespace`
+* Create a new route53 record for the given host (josh-test.dev.funcx.org).  
+  We won't have to do this after [external dns](https://kubernetes-sigs.github.io/aws-load-balancer-controller/v2.2/guide/integrations/external_dns/) has been enabled.
+
+
+## Advanced option: Deploying a funcx-endpoint outside of K8s
+
+The above notes installed a funcx endpoint inside kubernetes, alongside the funcx services.
+In real life, end users would install funcx endpoints elsewhere (on their compute
+resources) and attach them to the officially funcx services.
+
+It is also possible to install an endpoint elsewhere and attach it to services
+deployed by this chart for dev purposes.
+
+---
+**NOTE**
+
+This only works on Linux systems.
+
+---
+
+Here are the steps to install, preferably into your active conda environment:
+
+```shell script
+git clone https://github.com/funcx-faas/funcX.git
+cd funcX
+git checkout main
+pip install funcx_sdk
+pip install funcx_endpoint
+```
+
+Next create an endpoint configuration:
+
+```shell script
+funcx-endpoint
+```
+
+Update the endpoint's configuration file to point the endpoint to locally
+deployed services, which we will setup in the next sections. If using default
+values, the funcx_service_address should be set to http://localhost:5000/v2.
+
+`~/.funcx/default/config.py`
+
+```python
+    config = Config(
+    executors=[HighThroughputExecutor(
+        provider=LocalProvider(
+            init_blocks=1,
+            min_blocks=0,
+            max_blocks=1,
+        ),
+    )],
+    funcx_service_address="http://127.0.0.1:5000/api/v1", # <--- UPDATE THIS LINE
+)   
+```
+
+
+
+## See also
+
+More notes in the local_dev/ subdirectory that should be merged into this file
+
+
+
+# Assorted benc notes
+
+this gets as far as submitting for me, but attempts to get the result always give
+funcx.utils.errors.TaskPending: Task is pending due to waiting-for-nodes
+
+There's a pod started up ok - called funcx-1631645705407 without any more interesting name. i guess thats a worker? after 106s all that is in the logs is a warning from pip running as root
+- but i can see pip running.
+
+So i should put a note here about how long things might take here?
+Note that it has changes from waiting-for-ep in the error to waiting-for-nodes
+after several minutes, so there is more stuff going on, slowly... 5m later and its still churning. it's had one restart 63s ago... nothing clear about *why* it restarted though.
+in kubectl describe pod XXXXX I can see the commandline - a pip install and then a funcx-manager.
+It seems to end with: PROCESS_WORKER_POOL main event loop exiting normally
+
+So lets debug a bit more about where the task execution happens or not.
+
+Is this doing a pip install on every restart (?!) - that's a question to ask.
+(maybe it's not actually installing new stuff though - which is why i'm not seeing any
+packages being installed on subsequent runs)
+
+Eventually it went into "CrashLoopBackOff" at the kubernetes level, which maybe isn't the right behaviour for "exiting normal" at the PROCESS_WORKER_POOL level? Ask on chat about that.
+
+There's nothing in the endpoint logs about starting up that funcx process worker container, or about jobs happening - just every 600s a keepalive message
+
+Digging into the endpoint container environment, find ~/.funcx/funcx/EndpointInterchange.log
+which is reporting a sequence of errors:
+
+2021-09-15 14:26:55.592 funcx_endpoint.executors.high_throughput.executor:540 [WARNING]  [MTHR
+EAD] Executor shutting down due to version mismatch in interchange
+2021-09-15 14:26:55.610 funcx_endpoint.executors.high_throughput.executor:542 [ERROR]  [MTHREA
+D] Exception: Task failure due to loss of manager b'18e00d57935c'
+NoneType: None
+2021-09-15 14:26:55.610 funcx_endpoint.executors.high_throughput.executor:577 [INFO]  [MTHREAD
+] queue management worker finished
+
+then every 10ms this message *forever* 2021-09-15 14:26:55.613 funcx_endpoint:504 [ERROR]  [MAIN] Something broke while forwarding re
+sults from executor to forwarder queues
+Traceback (most recent call last):
+  File "/usr/local/lib/python3.7/site-packages/funcx_endpoint/endpoint/interchange.py", line 4
+90, in _main_loop
+    results = self.results_passthrough.get(False, 0.01)
+  File "/usr/local/lib/python3.7/multiprocessing/queues.py", line 108, in get
+    res = self._recv_bytes()
+  File "/usr/local/lib/python3.7/multiprocessing/connection.py", line 216, in recv_bytes
+    buf = self._recv_bytes(maxlength)
+  File "/usr/local/lib/python3.7/multiprocessing/connection.py", line 407, in _recv_bytes
+    buf = self._recv(4)
+  File "/usr/local/lib/python3.7/multiprocessing/connection.py", line 383, in _recv
+    raise EOFError
+EOFError
+
+- that kind of failure should be resulting in a kubernetes level restart (or some other exit/restart) not a hang loop like this?
+- mismatch of what? between who? is it the process worker pool container vs the funcx container?  Looking at interchange.py - this might not even be from a version mismatch: it can happen if reg_flag is false (due to a json deserialisation problem in registration message). Other than that, it can happen because the python versions from the manager vs the interchange.
+
+I commented on these logs not being obvious, in slack, and ben g gave me:
+> so for debugging, I added a value to the endpoint helm chart detachEndpoint -since the endpoint runs in a daemon, the output doesn’t show up in the pod’s logs.. Setting this to false means the endpoint runs in the main thread. Less reliable, but easy for debugging
+
+I haven't tried that yet. But if its good, then... if k8s endpoints are also expected for end users, maybe they should also get the same functionality? (eg why is this running as a daemon when its inside a pod anyway managing that?)
+
+whle the task on the client side still reports:
+funcx.utils.errors.TaskPending: Task is pending due to waiting-for-ep
+
+At the same time, the process worker service repeatedly exits and is restarted by kubernetes (with it eventually hitting CrashLoopBackOff to slow this down) - presumably that's somehow opposite half of this same error message, but it isn't clear. The entire log file is:
+
+root@amber:~# minikube kubectl logs -- funcx-1631715998878
+WARNING: Running pip as the 'root' user can result in broken permissions and conflicting behaviour with the system package manager. It is recommended to use a virtual environment instead: https://pip.pypa.io/warnings/venv
+PROCESS_WORKER_POOL main event loop exiting normally
+root@amber:~# 
+
+I found a more interesting log file here:
+/home/funcx/.funcx/funcx/HighThroughputExecutor/worker_logs/8e8f66c705d3/manager.log
+
+which eventully reports a critical error that the interchange heartbeat is missing - not at all like the kubectl log error of: ... exiting normally.
+
+It's a bit weird to be 2 minutes in before the manager even notices that the interchange isn't even alive.
+
+So... the version mismatch:
+This is invoking python:3.6-buster - so let's track down where that was.
+
+Selecting the correct image (eg for AWS AMIs, not docker images) has been a massive
+usability problem for testing parsl on image based systems... I'm not sure how much it
+matters in end-use though, if you're assuming that users make app-specific images that
+are tied to their own environment? I don't have experience there.  I haven't spent any
+time seriously trying to solve this for parsl, but eg ZZ did container stuff for parsl
+so I'd be interested to here any of his relevant experiences. not really a  problem
+i am interested in solving.
+
+so grep around in the source tree for python:3.6-buster
+
+The funcx endpoint helm chart is coming from a URL on funcx.org, not the helm-charts repo,
+under here: http://funcx.org/funcx-helm-charts
+
+There's a 0.3 chart in the funcx-helm-charts repo by the looks of it - perhaps I can try that, by hacking at the server-side chart. What's the right way to be controlling this?
+
+While checking if process claims to be alive, the endpoint output line:
+"funcx-endpoint process is still alive. Next check in 600s." 
+should be given a timestamp - it doesn't seem to go through the logging mechanism so
+is not getting a timestamp that way. So I have no idea when it last ran, or if its
+an outdated message, etc.
+
+This command to install the worker inside the worker container is installing funcx-endpoint and directing the output to a file called =0.2.0. That is probably not what is intended. Put the whole thing in ' marks perhaps.
+
+      pip install funcx-endpoint>=0.2.0
+
+This is in the funcx endpoint helm chart... along with the naughty command right next
+to it:
+workerImage and 
+workerInit
+so I should be able to override those myself in my values.yaml?
+
+funcx_endpoint:
+  workerImage: python:3.7-buster
+  workerInit: 'pip install "funcx-endpoint>=0.2.0"'
+
+note that workerInit is embedded python string syntax, not a plain string, so
+you can't use ' marks inside it because it is substituted in somewhere I think
+and that causes a syntax error - eg try the above line with " and ' swapped
+and see:
+"""
+File "/home/funcx/.funcx/funcx/config.py", line 24
+    worker_init='pip install 'funcx-endpoint>=0.2.0'',
+                                  ^
+SyntaxError: invalid syntax
+"""
+because string substitution into source without proper escaping.
+
+This could be fixed - either by reading the string from a different place and
+not doing python source substitution, or by performing escaping on the string.
+This behaviour is likely to cause trouble to anyone doing non-trivial bash
+in their worker_init.
+
+it's frustrating that the python version is not set to the version that
+is actually used by the endpoint.
+]
+
+===
 
 How does I upgrade this? It was installed using the latest images at install time I guess?
 I see a funcx-web-service tag from 15h ago after running helm upgrade funcx funcx...
@@ -886,19 +1013,6 @@ the web(sockets) ports and the forwarder ports?  On the production system are th
 made fully public in different ways?
 
 
-
-### nice ways to get endpoint in k8s cluster ofr devs
-
-eg make it consistent every time over restarts rather than random each time?
-
-or output it somewhere that cna be read programmatically by clients?
-
-TODO: best common practice is probably to generate an endpoint ID and hard
-configure it right from the start, as suggested by ryan. That eliminates the
-need for fiddling in the logs to discover the random endpoint ID each time.
-Be very clear that this needs to be unique.
-
-
 ## web-service build (and check others?) has a requiremenets.txt which
 installs from git funcx api main
 
@@ -966,151 +1080,4 @@ https://github.com/funcx-faas/funcX/issues/600   (duplicate pod names - dupe of 
 https://github.com/funcx-faas/funcX/issues/601 (broken k8s worker pods accumulate forever)
 
 
-
-## Making a release and deploying to the AWS clusters
-
-The following is an incomplete guide to making and deploying a new release onto our development or production clusters.
-
-Here are the components that need updating as part of a release, in the order they should be updated
-due to dependencies. Note that only components that have changes for release need to updated and the
-rest can safely be skipped:
-
-* funcx-forwarder
-    * Update version number
-    * merge above changes to main in a PR
-    * Create a branch off of main with the version number, for, eg: 'v0.3.3'.
-      For dev releases, do alpha releases `v0.3.3a0`
-    * Ensure that the branch has the CI tests passing and the publish step working
-
-* funcx-web-service
-    * Same steps as funcx-forwarder
-
-* funcx-websocket-service
-    * Same steps as funcx-websocket-service
-
-* Update helm-charts
-    * Update the smoke-tests in the helm-charts to use the new version numbers in `conftest.py`
-
-* Prepare to deploy to cluster.
-    * Confirm that all the bits to be deployed should be available on dockerhub.
-    * Run `kubectl config current-context` which should return something like:
-
-    >> arn:aws:eks:us-east-1:512084481048:cluster/funcx-dev
-
-    * Make sure the right cluster is pointed to by kubectl, and use this terminal for all following steps.
-
-* Download the current values deployed to the target cluster as a backup. Note: you can use this as a base values.yaml.
-    >> helm get values funcx > enviornment.yaml
-
-* Update the values to use the release branchnames as the new tags
-
-* Deploy with:
-    >> helm upgrade -f prod-values.yaml funcx funcx
-
-> :warning: It is preferable to upgrade rather than blow away the current deployment and redeploy
-    because, wiping the current deployment loses state that ties the Route53 entries to point at
-    the ALB, and any configuration on the ALB itself could be lost.
-
-> :warning: If the deployment was wiped here are the steps:
-    * Go to Route53 on AWS Console and select the hosted zone: `dev.funcx.org`. Select the
-      appropriate A record for the deployment you are updating and edit the record to update the
-      value to something like `dualstack.k8s-default-funcxfun-dd14845f35-608065658.us-east-1.elb.amazonaws.com.`
-    * Add the ALB to the existing WAF Rules here: `https://console.aws.amazon.com/wafv2/homev2/web-acl/funcx-prod-web-acl/d82023f9-2cd8-4aed-b8e3-460dd399f4b0/overview?region=us-east-1#`
-
-
-* While a new forwarder will be launched on upgrade, the new one will not go online
-  since it requires the ports that are in use by the older one. So you must manually
-  delete the older funcx-forwarder pod.
-
-  >> kubectl get pods
-  \# Find the older funcx-forwarder pod
-
-  >> kubctl delete pods \<NAME_OF_THE_OLDER_FUNCX_FORWARDER\>
-
-
-## Deploy a temporary k8s deployment in the dev cluster
-
-It is occasionally useful to deploy a full FuncX stack in the dev cluster under
-a different namespace.  This is useful when two developers are both working on
-or debugging a feature as well as to verify a feature works as expected before
-potentially deploying to the main dev environment deployment.  These
-instructions will get a second FuncX deployment (with k8s based redis,
-postgres, and rabbitmq) running at a specified host under `*.api.dev.funcx.org`.
-
-* To avoid forwarder port conflicts, ensure at least as many nodes are running 
-  in EKS as there will be forwarder deployments since forwarders rely on host
-  ports to be addressable.  To scale the node group you can use `eksctl scale
-  nodegroup --cluster=funcx-dev --name=funcx-dev-node-group --nodes=2
-  --nodes-max=2` where `nodes-max` and `nodes` are set to as many as are needed.
-* Create a new namespace for your deployment: e.g. `kubectl create namespace josh-funcx` 
-* Create a `values.yaml` that includes information about the host name to use 
-  in the ingress definition.  E.g.:
-    ingress:
-      enabled: true
-      host: josh-test.dev.funcx.org
-      name: dev-lb
-      subnets: subnet-0c0d6b32bb57c39b2, subnet-0906da1c44cbe3b8d
-      use_alb: true
-* Install the helm chart as described above, but specifying the new `values.yaml` file 
-  and the namespace. E.g.: `helm install -f deployed_values/values.yaml josh-funcx funcx --namespace`
-* Create a new route53 record for the given host (josh-test.dev.funcx.org).  
-  We won't have to do this after [external dns](https://kubernetes-sigs.github.io/aws-load-balancer-controller/v2.2/guide/integrations/external_dns/) has been enabled.
-
-
-## Advanced option: Deploying funcx-endpoint outside of K8s [this is "advanced" - move to end of doc, and crossref with other "install an endpoint" document]
-
-The above noteis installed a funcx endpoint inside kubernetes, alongside the funcx services.
-In real life, end users would install funcx endpoints elsewhere (on their compute
-resources) and attach them to the officially funcx services.
-
-It is also possible to install an endpoint elsewhere and attach it to services
-deployed by this chart for dev purposes.
-
----
-**NOTE**
-
-This only works on Linux systems.
-
----
-
-Here are the steps to install, preferably into your active conda environment:
-
-```shell script
-git clone https://github.com/funcx-faas/funcX.git
-cd funcX
-git checkout main
-pip install funcx_sdk
-pip install funcx_endpoint
-```
-
-Next create an endpoint configuration:
-
-```shell script
-funcx-endpoint
-```
-
-Update the endpoint's configuration file to point the endpoint to locally
-deployed services, which we will setup in the next sections. If using default
-values, the funcx_service_address should be set to http://localhost:5000/v2.
-
-`~/.funcx/default/config.py`
-
-```python
-    config = Config(
-    executors=[HighThroughputExecutor(
-        provider=LocalProvider(
-            init_blocks=1,
-            min_blocks=0,
-            max_blocks=1,
-        ),
-    )],
-    funcx_service_address="http://127.0.0.1:5000/api/v1", # <--- UPDATE THIS LINE
-)   
-```
-
-
-
-## See also
-
-More notes in the local_dev/ subdirectory that should be merged into this file
 
