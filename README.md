@@ -97,12 +97,13 @@ TODO: is there a "hello world" style helm+kubernetes validation that could be ru
 that we can say "you need helm+kubernetes at least good enough to do this:"
 
 
-Now cloen the funcx helm repo (which you are reading this document from, perhaps):
+Now clone the funcx helm repo (which you are reading this document from, perhaps).
+You can also use the equivalent ssh-based URL.
 
 ```
 mkdir src
-cd  src
-git clone git@github.com:funcx-faas/helm-chart
+cd src
+git clone https://github.com/funcx-faas/helm-chart
 cd helm-chart
 ```
 
@@ -122,6 +123,9 @@ development)
 
 
 ### Creating endpoint secrets for a funcx endpoint in the K8s deployment
+
+There are various awful ways to do this. Some of them are here.
+
 
 TODO: this is messy and not part of the service install so i'm not sure
 if it should happen here or as part of the configuration section?
@@ -146,6 +150,39 @@ but how then did I get the token out?
 You will be prompted to follow the authorization link and paste the resulting
 token into the console. Once you do that, funcx-endpoint will create a
 `~/.funcx` directory and provide you with a token file.
+===
+
+here's another way
+
+```
+# docker run --rm -ti funcx/kube-endpoint:main bash -l
+$ python3 -c "import funcx ; funcx.FuncXClient()"
+Please paste the following URL in a browser:
+https://auth.globus.org/v2/oauth2/authorize?client_id=.....
+```
+
+visit url
+
+paste code
+
+press enter
+
+```
+$ cat .funcx/credentials/funcx_sdk_tokens.json 
+{
+  "auth.globus.org": {
+    "scope": "openid",
+    "access_token": 
+```
+
+Copy that file (eg via clipboard) somewhere safe and make it available
+in your minikube shell.
+
+===
+
+after getting the funcx_sdk_tokens.json file by hook or by crook, do this:
+
+
 
 The Kubernetes endpoint expects this file to be available as a Kubernetes
 secret named `funcx-sdk-tokens`.
