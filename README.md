@@ -1,6 +1,6 @@
 # A Chart for Deploying the funcX stack
 
-# Who is this README for?
+## Who is this README for?
 
 This README is aimed at people who want to deploy funcX services into
 kubernetes, using the helm chart contained in this repository.
