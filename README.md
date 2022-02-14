@@ -114,7 +114,7 @@ current chart describes. (TODO: notes later for overriding this for
 development)
 
 
-### Configuring a funcx-endpoint in the K8s deployment
+### Creating endpoint secrets for a funcx endpoint in the K8s deployment
 
 TODO: this is messy and not part of the service install so i'm not sure
 if it should happen here or as part of the configuration section?
