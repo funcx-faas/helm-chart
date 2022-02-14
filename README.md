@@ -3,7 +3,7 @@
 # Who is this README for?
 
 This README is aimed at people who want to deploy funcX services into
-kubernetes.
+kubernetes, using the helm chart contained in this repository.
 
 The main part of the text is aimed at a new funcX developer making their
 first install for themselves to hack on.
@@ -11,22 +11,15 @@ first install for themselves to hack on.
 Other notes on the way talk about how the install can be made in the
 production system at AWS, and in development environments hosted at AWS.
 
-# About benc's notes
-
-Notes are here for various purposes: (in no particular order)
-
-i) making this document better support the Document Goal
-ii) making the default configuration of funcX in the repositories better support the
-Document Goal
-iii) making funcX better support users (people invoking functions, and people operating
-their own endpoints).
-
-
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 [![NSF-2004894](https://img.shields.io/badge/NSF-2004894-blue.svg)](https://nsf.gov/awardsearch/showAward?AWD_ID=2004894)
 [![NSF-2004932](https://img.shields.io/badge/NSF-2004932-blue.svg)](https://nsf.gov/awardsearch/showAward?AWD_ID=2004932)
 
-This application includes:
+
+## Components
+
+A funcx install consists of a number of components, which will each be installed by this chart.
+
 * FuncX Web-Service
 * FuncX Websocket Service
 * FuncX Forwarder
@@ -35,143 +28,90 @@ This application includes:
 * Redis Shared Data Structure
 * RabbitMQ broker
 
-## Kubernetes pre-reqs
+## Kubernetes pre-requisites
 
-You will need a kubernetes installation.
+You will need a Kubernetes (k8s) installation. There is no particularly
+favoured form of setup. Some ways used by funcX developers include:
 
-Some ways in which you can get an installation:
+* minikube on a hetzner cloud node
+* docker desktop
+* microk8s
 
-(benc: hetzner cloud + minikube)
-(slack suggestion: docker desktop)
+You will also need `helm`.
 
-## eg. minikube + hetzner cloud
+You will maybe need an ingress controller - traditionally people haven't been
+using one but we are pushing on that a bit. More later.
 
-base os: ubuntu 20.04.03
+### Example install of hetzner cloud + minikube
 
-running everything as roo
+This shows how @benclifford installed minikube on a hetzner cloud node as
+root:
 
-apt-get install docker.io
-curl -LO https://storage.googleapis.com/minikube/releases/latest/minikube-linux-amd64
-install minikube-linux-amd64 /usr/local/bin/minikube
 
-apt-get install contrack   # because: ❌  Exiting due to GUEST_MISSING_CONNTRACK: Sorry, Kubernetes 1.22.1 requires conntrack to be installed in root's path
+Base os: Ubuntu 20.04.03
 
-minikube --driver=none    # because i am root in a VM. otherwise apparently driver=docker might be nice? I haven't tried
+```
+# apt-get install docker.io
+# curl -LO https://storage.googleapis.com/minikube/releases/latest/minikube-linux-amd64
+# install minikube-linux-amd64 /usr/local/bin/minikube
+
+# apt-get install contrack   # because: ❌  Exiting due to GUEST_MISSING_CONNTRACK: Sorry, Kubernetes 1.22.1 requires conntrack to be installed in root's path
+
+# minikube --driver=none    # because i am root in a VM. otherwise apparently driver=docker might be nice? I haven't tried
+```
 
 Now can run to see running pods
 
-$ minikube kubectl -- get pods -A
+```
+# minikube kubectl -- get pods -A
+```
 
 This gives me 7 runnings k8s pods.
 
+Now install helm, following debian/apt instructions here: https://helm.sh/docs/intro/install/
 
-now install helm, following debian/apt instructions here: 
-https://helm.sh/docs/intro/install/
-
+```
 curl https://baltocdn.com/helm/signing.asc | sudo apt-key add -
 sudo apt-get install apt-transport-https --yes
 echo "deb https://baltocdn.com/helm/stable/debian/ all main" | sudo tee /etc/apt/sources.list.d/helm-stable-debian.list
 sudo apt-get update
 sudo apt-get install helm
+```
 
-now can run:
+How you can run this to see the default helm help text to check it was installed:
+
 
 ```
 # helm
 ```
 
-and see the default helm help text.
 
 TODO: is there a "hello world" style helm+kubernetes validation that could be run so
 that we can say "you need helm+kubernetes at least good enough to do this:"
 
 
-now get the funcx helm repo:
+Now cloen the funcx helm repo (which you are reading this document from, perhaps):
 
+```
 mkdir src
 cd  src
 git clone git@github.com:funcx-faas/helm-chart
 cd helm-chart
+```
 
-and run the first helm command from below:
+and run a helm command to update funcx dependencies:
 
+```
 helm dependency update funcx
-
-which will download some stuff.
-
-Note that it downloads a funcx_endpoint chart over http - that isn't something contained in this repo, even though it is a funcx related chart...
-
-see notes further down for continuation...
-
-## Preliminaries [for funcx endpoint]
-
-how is this a preliminary rather than part of the main install? it even looks like a funcx-endpoint is set up as part of helm automatically ... so is this whole endpoint section irrelevant for an initial install? or at least, there should be better intro description at this point
-that an endpoint will be deployed inside k8s?
-
-make a decision for the user - as they are new. they can try different ways later, which
-can be documented elsewhere - for example, this is the helm repo so should be talking
-about the helm deployment of the endpoint. Or pointing people at the endpoint repo.
-
-I think for an initial install, the in-kubernetes default endpoint which configures
-itself almost automatically should be chosen for getting started. With instructions
-on attaching an external endpoint described *afterwards* at the end of this document.
-
-There are two modes in which funcx-endpoints could be deployed: 
-
-
-1. funcx-endpoint deployed outside k8s, connecting to hosted services in k8s
-2. funcx-endpoint deployed inside k8s
-
-Also be clear on the deployment modes: production-like (eg with many users, centrally,
-with expection that images are from tags, endpoints deployed by other people) 
-and development-like - eg on my own private VM with my own hacked up source changes and
-all sorts of mess, and everything including endpoints deployed by me.
-
-be clear throughout this document what refers to those two use cases.
-
-### Deploying funcx-endpoint outside of K8s [this is "advanced" - move to end of doc, and crossref with other "install an endpoint" document]
-
----
-**NOTE**
-
-This only works on Linux systems.
-
----
-
-Here are the steps to install, preferably into your active conda environment:
-
-```shell script
-git clone https://github.com/funcx-faas/funcX.git
-cd funcX
-git checkout main
-pip install funcx_sdk
-pip install funcx_endpoint
 ```
 
-Next create an endpoint configuration:
+which will download some stuff. (TODO: what?)
 
-```shell script
-funcx-endpoint
-```
-
-Update the endpoint's configuration file to point the endpoint to locally
-deployed services, which we will setup in the next sections. If using default
-values, the funcx_service_address should be set to http://localhost:5000/v2.
-
-`~/.funcx/default/config.py`
-
-```python
-    config = Config(
-    executors=[HighThroughputExecutor(
-        provider=LocalProvider(
-            init_blocks=1,
-            min_blocks=0,
-            max_blocks=1,
-        ),
-    )],
-    funcx_service_address="http://127.0.0.1:5000/api/v1", # <--- UPDATE THIS LINE
-)   
-```
+One note for later is this step downloads a funcx_endpoint chart: although
+this is funcX related, it is a separately versioned component because end users
+are expected to deploy the endpoint - unlike the funcX services that this
+current chart describes. (TODO: notes later for overriding this for
+development)
 
 
 ### Deploying funcx-endpoint into the K8s deployment
@@ -1022,6 +962,58 @@ postgres, and rabbitmq) running at a specified host under `*.api.dev.funcx.org`.
   and the namespace. E.g.: `helm install -f deployed_values/values.yaml josh-funcx funcx --namespace`
 * Create a new route53 record for the given host (josh-test.dev.funcx.org).  
   We won't have to do this after [external dns](https://kubernetes-sigs.github.io/aws-load-balancer-controller/v2.2/guide/integrations/external_dns/) has been enabled.
+
+
+## Advanced option: Deploying funcx-endpoint outside of K8s [this is "advanced" - move to end of doc, and crossref with other "install an endpoint" document]
+
+The above noteis installed a funcx endpoint inside kubernetes, alongside the funcx services.
+In real life, end users would install funcx endpoints elsewhere (on their compute
+resources) and attach them to the officially funcx services.
+
+It is also possible to install an endpoint elsewhere and attach it to services
+deployed by this chart for dev purposes.
+
+---
+**NOTE**
+
+This only works on Linux systems.
+
+---
+
+Here are the steps to install, preferably into your active conda environment:
+
+```shell script
+git clone https://github.com/funcx-faas/funcX.git
+cd funcX
+git checkout main
+pip install funcx_sdk
+pip install funcx_endpoint
+```
+
+Next create an endpoint configuration:
+
+```shell script
+funcx-endpoint
+```
+
+Update the endpoint's configuration file to point the endpoint to locally
+deployed services, which we will setup in the next sections. If using default
+values, the funcx_service_address should be set to http://localhost:5000/v2.
+
+`~/.funcx/default/config.py`
+
+```python
+    config = Config(
+    executors=[HighThroughputExecutor(
+        provider=LocalProvider(
+            init_blocks=1,
+            min_blocks=0,
+            max_blocks=1,
+        ),
+    )],
+    funcx_service_address="http://127.0.0.1:5000/api/v1", # <--- UPDATE THIS LINE
+)   
+```
 
 
 
