@@ -116,6 +116,9 @@ development)
 
 ### Deploying funcx-endpoint into the K8s deployment
 
+TODO: this is messy and not part of the service install so i'm not sure
+if it should happen here or as part of the configuration section?
+
 We can deploy the kubernetes endpoint as a pod as part of the chart. It
 needs to have a valid copy of the funcx's `funcx_sdk_tokens.json` which can
 be created by running on your local workstation and running
@@ -148,7 +151,7 @@ kubectl create secret generic funcx-sdk-tokens \
 
 ## Installing FuncX ["central services"? what's the right title vs the endpoint and client?]
 
-0. Update cloudformation stack if necessary
+0. Update cloudformation stack if necessary [TODO: I think this is only for production deployment? ask Josh. In which case, ignore for personal dev cluster]
 
 1. Make a clone of this repository
 2. Download subcharts:
@@ -159,25 +162,31 @@ kubectl create secret generic funcx-sdk-tokens \
      [forward reference to the two different values sections later on in this
       document: should I just have the three lines mentioned here? or should I
       be copy-pasting a huge example?]
-4. Obtain Globus Client ID and Secret. These secrets need to exist in the
-   correct Globus Auth app. Ask for access to the credentials by contacting
-   https://github.com/BenGalewsky or sending a message to the `dev` funcx Slack
-   channel. Once you have your credentials, paste them into your `values.yaml`:
+   [TODO: paragraph desribing what values.yaml will do]
+4. Obtain Globus Client ID and Secret. Get the credentials by asking on the
+   `dev` funcx Slack channel.
+
+   Once you have your credentials, paste them into your `values.yaml`:
     ```yaml
     webService:
       globusClient: <<your app client>>
       globusKey: <<your app secret>>
     ```
+
+   [TODO: there are plans afoot to make this different for developers. When
+   that is settled, can reuse deleted text, and elaborate:
+   These secrets need to exist in the correct Globus Auth app. 
+   ]
+
 5. Install the helm chart:
     ```shell script
     helm install -f deployed_values/values.yaml funcx funcx
     ```
 
 5b.
-now i see a bunch of services including a funcx endpoint
+now i see a bunch of services including a funcx endpoint, like this:
 
-looks like this:
-
+```
 # minikube kubectl get pods
 NAME                                            READY   STATUS    RESTARTS         AGE
 funcx-endpoint-86756c48c8-flhqf                 1/1     Running   0                95m
@@ -189,50 +198,99 @@ funcx-rabbitmq-0                                1/1     Running   0             
 funcx-redis-master-0                            1/1     Running   0                95m
 funcx-redis-slave-0                             1/1     Running   0                95m
 funcx-redis-slave-1                             1/1     Running   0                95m
-
+```
 
 6. You should be able to see the endpoint registering with the web service
 in their respective logs, along with the forwarder log. Check the endpoint's
 logs for its ID. 
 
-7. You can access your web service through the ingress or via a port forward
-to the web service pod. Instructions are provided in the displayed notes.
-[ingress should become the official way, and be better documented - it's what I've
-been working on]
+7. You can access your funcX services through the ingress or via a port forward
+to the web service pod. For port forwarding, instructions are provided in the displayed notes.
+[ingress should become the official way, and be better documented, but there is less
+experience with it and it needs an ingress controller...]
 
 
 [clarify which logs / *where* those logs are? explicitly which (3?) logs to
 look at... - who is registering with whom?]
 
 Endpoint log will look like:
-
+```
 2021-09-14 16:36:02 endpoint.endpoint_manager:172 [INFO]  Starting endpoint with uuid: cfd389f3-4eda-413b-af95-4d54a8e944dc
+```
 
 forwarder will look like:
+```
 {"asctime": "2021-09-14 18:20:44,535", "name": "funcx_forwarder.forwarder", "levelname": "DEBUG", "message": "endpoint_status_message", "log_type": "endpoint_status_message", "endpoint_id": "cfd389f3-4eda-413b-af95-4d54a8e944dc", "endpoint_status_message": {"_payload": null, "_header": "b'\\xcf\\xd3\\x89\\xf3N\\xdaA;\\xaf\\x95MT\\xa8\\xe9D\\xdc'", "ep_status": {"task_id": -2, "info": {"total_cores": 0, "total_mem": 0, "new_core_hrs": 0, "total_core_hrs": 0, "managers": 0, "active_managers": 0, "total_workers": 0, "idle_workers": 0, "pending_tasks": 0, "outstanding_tasks": {}, "worker_mode": "no_container", "scheduler_mode": "hard", "scaling_enabled": true, "mem_per_worker": null, "cores_per_worker": 1.0, "prefetch_capacity": 10, "max_blocks": 100, "min_blocks": 1, "max_workers_per_node": 1, "nodes_per_block": 1}}, "task_statuses": {}}}
+```
 
 web service will look like:
+```
 {"asctime": "2021-09-14 16:36:03,273", "name": "funcx_web_service", "levelname": "INFO", "message": "Successfully registered cfd389f3-4eda-413b-af95-4d54a8e944dc in database"}
+```
 
-### connecting clients
+## Exposing FuncX to external clients and endpoints
 
-the startup message (from helm) has a couple of kubectl port-forward commands that might be a bit wrong - i ended up using these two:
-# minikube kubectl -- port-forward --address 0.0.0.0 service/funcx-funcx-web-service 8000
-# minikube kubectl -- port-forward --address 0.0.0.0 service/funcx-funcx-websocket-service 6000
+You need to expose two ports from your cluster to clients. There are two ways:
+ingress and port-forward. These instructions talk about ingress, which is more
+complicated to set up but easier to maintain and closer to the production
+configuration. If you do not configure ingress, then the post-install notes
+output by `helm install` will tell you which port-forward commands to run.
 
-These port forwards are only temporary - they run as foreground processes and break as soon as the pods change (for example due to restarts). That seems a bit frustrating if they're meant to be pointing to services. Is there a more persistent kubernetes configuration that can be used to expose to the world? And for other people, to expose to whatever their security-scoped environment is?
+1. Install an ingress controller. Minikube and microk8s do this differently.
 
-This will expose the services on port 8000 and port 6000  - because this is a service, the 2nd port number in the helm suggested text is ignored, I think - so that could be removed in a PR (as long as I check and justify that with documentation links)
+1.a Minikube:
 
-now from a working funcx install, create a funcx client pointed at the current 
-service, like this:
+Run this:
 
+```
+minikube addons enable ingress
+```
+
+1.b microk8s
+
+Run this:
+
+```
+microk8s enable ingress
+```
+
+Then configure microk8s to serve all namespaces. (by default, it only
+serves the `public` ingress class). [TODO: i need to write the exact commands for this]
+
+2. Get a hostname that your kubernetes install is accessible under.
+
+Depending on your development environment, this might be the public hostname of your
+kubernetes server, or it might be an entry in `/etc/hosts` pointing to 127.0.0.1.
+Maybe even `localhost` works in that case.
+
+3. Enable ingress in the funcx install
+
+Edit `deployed_values/values.yaml` to enable funcx ingress and to tell funcx the
+host name from step 2.
+
+```
+ingress:
+  enabled: true
+  host: amber.cqx.ltd.uk
+```
+
+4. Redeploy funcx
+
+```
+helm upgrade --atomic -f deployed_values/values.yaml funcx funcx
+```
+
+### Connecting clients
+
+Create a `FuncXClient` instance pointing at your install, by specifying the funcx_service_address:
+
+```
 fxc = FuncXClient(funcx_service_address="http://amber.cqx.ltd.uk:8000/v2")
+```
 
-and then run quickstart guide style stuff - probably i don't need to paste it here, but
-I could...
+and then run the same sort of tests as can happen against the tutorial endpoint. For example:
 
-
+```
 from funcx.sdk.client import FuncXClient
 
 fxc = FuncXClient(PARMS HERE)
@@ -246,6 +304,15 @@ tutorial_endpoint = 'LOCAL ENDPOINT HERE'
 result = fxc.run(endpoint_id=tutorial_endpoint, function_id=func_uuid)
 
 print(fxc.get_result(result))
+```
+
+If you have got this far, then you have successfully installed the current
+version of funcx, and can begin to hack.
+
+
+[TODO: at this point I got into a lot of tangle with default Python versions
+not matching up. We've subsequently talked and fiddled with this - so check
+what will happen. In the meantime skip these notes:
 
 this gets as far as submitting for me, but attempts to get the result always give
 funcx.utils.errors.TaskPending: Task is pending due to waiting-for-nodes
@@ -378,58 +445,7 @@ in their worker_init.
 
 it's frustrating that the python version is not set to the version that
 is actually used by the endpoint.
-
-## Exposing FuncX to external clients and endpoints
-
-You need to expose two ports from your cluster to clients. There are two ways:
-ingress and port-forward. These instructions talk about ingress, which is more
-complicated to set up but easier to maintain and closer to the production
-configuration. If you do not configure ingress, then the post-install notes
-output by `helm install` will tell you which port-forward commands to run.
-
-1. Install an ingress controller. Minikube and microk8s do this differently.
-
-1.a Minikube:
-
-Run this:
-
-```
-minikube addons enable ingress
-```
-
-1.b microk8s
-
-Run this:
-
-```
-microk8s enable ingress
-```
-
-Then configure microk8s to serve all namespaces. (by default, it only
-serves the `public` ingress class). [TODO: i need to write the exact commands for this]
-
-2. Get a hostname that your kubernetes install is accessible under.
-
-Depending on your development environment, this might be the public hostname of your
-kubernetes server, or it might be an entry in `/etc/hosts` pointing to 127.0.0.1.
-Maybe even `localhost` works in that case.
-
-3. Enable ingress in the funcx install
-
-Edit `deployed_values/values.yaml` to enable funcx ingress and to tell funcx the
-host name from step 2.
-
-```
-ingress:
-  enabled: true
-  host: amber.cqx.ltd.uk
-```
-
-4. Redeploy funcx
-
-```
-helm upgrade --atomic -f deployed_values/values.yaml funcx funcx
-```
+]
 
 ### Forwarder Debugging
 
@@ -463,7 +479,7 @@ overridden per-deployment by placing replacements in the non-version-controlled
 `deployed_values/values.yaml` - for example, the globusClient/globusKey values
 earlier in the install instructions.
 
-This is a recommended initial set of values to override:
+This is a recommended [TODO: by whom?] initial set of values to override:
 
 should I use the following values.yaml or the values.yaml I was told to make earlier?
 dedupe - and if this section is the values.yaml i should be using, move it up to
@@ -496,14 +512,9 @@ rabbitmq:
   pullPolicy: Always
 ```
 
-### Additional config
-[are these values that are defaulted in funcx/values.yaml and can be overridden in
-deployed_values/values.yaml?]
+Here are some more values that can be set to adjust the deployed system
+configuration:
 
-There are a few values that can be set to adjust the deployed system
-configuration
-
-Here are some values that can be overriden:
 
 | Value                          | Desciption                                                          | Default           |
 | ------------------------------ | ------------------------------------------------------------------- | ----------------- |
@@ -542,7 +553,7 @@ Here are some values that can be overriden:
 
 
 ## Sealed Secrets
-[why would i want to do this?]
+[TODO: why would i want to do this?]
 The chart can take advantage of Bitnami's sealed secrets controller to encrypt
 sensitive config data so it can safely be checked into the GitHub repo.
 
@@ -625,7 +636,7 @@ EOF
 ## Subcharts
 This chart uses two subcharts to supply dependent services. You can update
 settings for these by referencing the subchart name and values from
-their READMEs.
+their READMEs. [TODO: also the funcx endpoint subchart?]
 
 For example
 ``` yaml
@@ -664,9 +675,13 @@ root@plsql:/# pgcli postgresql://funcx:leftfoot1@funcx-postgresql:5432/public
 
 
 
-how can i run a test job against this install?
+## Upgrades
+[TODO: crossref/ incorporate text from the helm upgrade that happens in the
+ingress section above
+]
 
-# upgrades
+# General benc grumbles to address
+
 How does I upgrade this? It was installed using the latest images at install time I guess?
 I see a funcx-web-service tag from 15h ago after running helm upgrade funcx funcx...
 (imgage ID d21432c1525a) - so is that what is running now? looks like it pulled a new image when I rebooted the server (!)
@@ -804,6 +819,11 @@ eg make it consistent every time over restarts rather than random each time?
 
 or output it somewhere that cna be read programmatically by clients?
 
+TODO: best common practice is probably to generate an endpoint ID and hard
+configure it right from the start, as suggested by ryan. That eliminates the
+need for fiddling in the logs to discover the random endpoint ID each time.
+Be very clear that this needs to be unique.
+
 
 ## web-service build (and check others?) has a requiremenets.txt which
 installs from git funcx api main
@@ -873,10 +893,9 @@ https://github.com/funcx-faas/funcX/issues/601 (broken k8s worker pods accumulat
 
 
 
-## Deployment/Release Guide
+## Making a release and deploying to the AWS clusters
 
-
-The following is an incomplete guide to deploying a new release onto our development or production clusters.
+The following is an incomplete guide to making and deploying a new release onto our development or production clusters.
 
 Here are the components that need updating as part of a release, in the order they should be updated
 due to dependencies. Note that only components that have changes for release need to updated and the
