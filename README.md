@@ -180,7 +180,7 @@ kubectl create secret generic funcx-sdk-tokens \
    These secrets need to exist in the correct Globus Auth app. 
    ]
 
-3b. Configure endpoint UUID:
+3b. Configure endpoint UUID.
 
     First generate a UUID, for example, by running `uuidgen` or `cat /proc/sys/kernel/random/uuid`.
 
