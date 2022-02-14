@@ -51,22 +51,29 @@ root:
 Base os: Ubuntu 20.04.03
 
 ```
+# apt-get update
 # apt-get install docker.io
 # curl -LO https://storage.googleapis.com/minikube/releases/latest/minikube-linux-amd64
 # install minikube-linux-amd64 /usr/local/bin/minikube
 
-# apt-get install contrack   # because: ❌  Exiting due to GUEST_MISSING_CONNTRACK: Sorry, Kubernetes 1.22.1 requires conntrack to be installed in root's path
+# apt-get install conntrack   # because: ❌  Exiting due to GUEST_MISSING_CONNTRACK: Sorry, Kubernetes 1.22.1 requires conntrack to be installed in root's path
 
-# minikube --driver=none    # because i am root in a VM. otherwise apparently driver=docker might be nice? I haven't tried
+# minikube start --driver=none    # because i am root in a VM. otherwise apparently driver=docker might be nice? I haven't tried
 ```
 
-Now can run to see running pods
+Now can run this to see some running pods. The `kube-system` namespace is for kubernetes system related pods. Later on, when funcx is installed, this command should also show funcx-related pods in the `default` namespace.
 
 ```
 # minikube kubectl -- get pods -A
+NAMESPACE     NAME                                        READY   STATUS    RESTARTS   AGE
+kube-system   coredns-64897985d-9qhvm                     1/1     Running   0          5s
+kube-system   etcd-ubuntu-4gb-hel1-1                      1/1     Running   0          16s
+kube-system   kube-apiserver-ubuntu-4gb-hel1-1            1/1     Running   0          16s
+kube-system   kube-controller-manager-ubuntu-4gb-hel1-1   1/1     Running   0          18s
+kube-system   kube-proxy-cklqx                            1/1     Running   0          5s
+kube-system   kube-scheduler-ubuntu-4gb-hel1-1            1/1     Running   0          18s
+kube-system   storage-provisioner                         1/1     Running   0          15s
 ```
-
-This gives me 7 runnings k8s pods.
 
 Now install helm, following debian/apt instructions here: https://helm.sh/docs/intro/install/
 
