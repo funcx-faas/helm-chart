@@ -208,9 +208,11 @@ kubectl create secret generic funcx-sdk-tokens \
       be copy-pasting a huge example?]
    [TODO: paragraph desribing what values.yaml will do]
 
+3a. mkdir deployed_values/
 
-3a. Obtain Globus Client ID and Secret. Get the credentials by asking on the
-   `dev` funcx Slack channel.
+3b. Obtain Globus Client ID and Secret for funcX. Get the credentials by asking on the
+   `dev` funcx Slack channel. This is distinct from the funcx credentials needed for the
+   endpoint, acquired in the previous section.
 
    Once you have your credentials, paste them into your `values.yaml`:
     ```yaml
@@ -238,6 +240,25 @@ kubectl create secret generic funcx-sdk-tokens \
     funcx_endpoint:
         endpointUUID: XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX
     ```
+
+3c Fix the funcx_endpoint image. By default this will install an image tag `main` which is
+hopelessly out of date and will result in obscure errors. [TODO: fix the endpoint default
+in endpoint chart, and remove the `main` tag image]
+
+Instead, override the image tag with an explicit python version. [TODO: it seems quite confused
+about what versions of python in each stage will work with each other. For now, try using a
+tag: main-3.9, like this:
+
+```
+funcx_endpoint:
+  endpointUUID: XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX
+  image:
+    pullPolicy: Always
+    tag: main-3.9
+
+```
+
+]
 
 5. Install the helm chart:
     ```shell script
@@ -320,9 +341,11 @@ serves the `public` ingress class). [TODO: i need to write the exact commands fo
 
 2. Get a hostname that your kubernetes install is accessible under.
 
-Depending on your development environment, this might be the public hostname of your
-kubernetes server, or it might be an entry in `/etc/hosts` pointing to 127.0.0.1.
-Maybe even `localhost` works in that case.
+You can use `localhost` if you are running your client code on your local machine
+too.
+
+Otherwise, figure out (using IP networking skills not described in this document)
+how you will address and name your kubernetes host.
 
 3. Enable ingress in the funcx install
 
@@ -332,7 +355,7 @@ host name from step 2.
 ```
 ingress:
   enabled: true
-  host: amber.cqx.ltd.uk
+  host: amber.cqx.ltd.uk   # <- this is the hostname you chose in step 2
 ```
 
 4. Redeploy funcx
@@ -341,12 +364,21 @@ ingress:
 helm upgrade --atomic -f deployed_values/values.yaml funcx funcx
 ```
 
+5. You should now see the ingress definition in kubernetes:
+
+```
+# kubectl get ingress
+NAME                  CLASS    HOSTS              ADDRESS   PORTS   AGE
+funcx-funcx-ingress   <none>   amber.cqx.ltd.uk             80      11d
+
+```
+
 ### Connecting clients
 
 Create a `FuncXClient` instance pointing at your install, by specifying the funcx_service_address,
 
 ```
-fxc = FuncXClient(funcx_service_address="http://amber.cqx.ltd.uk:8000/v2")
+fxc = FuncXClient(funcx_service_address="http://localhost/v2")   # <- this is also the hostname you chose in step 2
 ```
 
 and by specifying your endpoint UUID (generated earlier) when invoking a function.
