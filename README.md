@@ -126,36 +126,10 @@ development)
 
 There are various awful ways to do this. Some of them are here.
 
-
-TODO: this is messy and not part of the service install so i'm not sure
-if it should happen here or as part of the configuration section?
-
-We can deploy the kubernetes endpoint as a pod as part of the chart. It
-needs to have a valid copy of the funcx's `funcx_sdk_tokens.json` which can
-be created by running on your local workstation and running
-```shell script
- funcx-endpoint start
-```
-
-(or if I don't have this on my local workstation because I'm deploying purely
-inside kubernetes...? can I run this as a command inside minikube - eg after I've
-got this running?
-yes, with lots of error messages to ignore, I did this:
-
-docker run --rm -ti funcx/kube-endpoint:main /home/funcx/boot.sh funcx
-
-but how then did I get the token out?
-)
-
-You will be prompted to follow the authorization link and paste the resulting
-token into the console. Once you do that, funcx-endpoint will create a
-`~/.funcx` directory and provide you with a token file.
-===
-
-here's another way
+* Ugly method 1
 
 ```
-# docker run --rm -ti funcx/kube-endpoint:main bash -l
+# docker run --rm -ti funcx/kube-endpoint:main3.9 bash -l
 $ python3 -c "import funcx ; funcx.FuncXClient()"
 Please paste the following URL in a browser:
 https://auth.globus.org/v2/oauth2/authorize?client_id=.....
@@ -172,20 +146,25 @@ $ cat .funcx/credentials/funcx_sdk_tokens.json
 {
   "auth.globus.org": {
     "scope": "openid",
-    "access_token": 
+    "access_token": ...
 ```
 
 Copy that file (eg via clipboard) somewhere safe and make it available
 in your minikube shell.
 
-===
+* Ugly method 2
 
-after getting the funcx_sdk_tokens.json file by hook or by crook, do this:
+If you have used funcx (endpoint or submit side) elsewhere, you can probably
+find suitable tokens in ~/.funcx/credentials/funcx_sdk_tokens.json in that
+environment.
 
 
+After getting the funcx_sdk_tokens.json file by hook or by crook, copy
+to a file called `funcx_sdk_tokens.json` - the name of this file is
+important as it will be used inside the created secret. Don't be
+tempted to call it `tmp.json` for example.
 
-The Kubernetes endpoint expects this file to be available as a Kubernetes
-secret named `funcx-sdk-tokens`.
+Now create the kubernetes secret like this:
 
 You can install this secret with:
 ```shell script
