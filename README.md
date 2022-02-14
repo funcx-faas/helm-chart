@@ -149,7 +149,7 @@ kubectl create secret generic funcx-sdk-tokens \
   --from-file ~/.funcx/credentials/funcx_sdk_tokens.json
 ```
 
-## Installing FuncX ["central services"? what's the right title vs the endpoint and client?]
+## Installing FuncX [TODO: "central services"? what's the right title vs the endpoint and client?]
 
 0. Update cloudformation stack if necessary [TODO: I think this is only for production deployment? ask Josh. In which case, ignore for personal dev cluster]
 
