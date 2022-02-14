@@ -185,7 +185,8 @@ kubectl create secret generic funcx-sdk-tokens \
     First generate a UUID, for example, by running `uuidgen` or `cat /proc/sys/kernel/random/uuid`.
 
     Do not copy someone elses UUID from their example configuration. All kinds of subtle identity
-    problems will happen if you do.
+    problems will happen if you do. Similarly, if you make another endpoint install, do not re-use
+    the same UUID. UUIDs are cheap. If in doubt, generate a new one.
 
     Paste the UUID into your values.yaml in an endpoint section:
 
