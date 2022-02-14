@@ -33,7 +33,7 @@ endpoint:
   enabled: true
 
 funcx_endpoint:
-  tag: main
+  tag: main-3.9
   funcXServiceAddress: http://funcx-funcx-web-service:8000
   pullPolicy: Always
 
