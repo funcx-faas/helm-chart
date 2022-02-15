@@ -601,7 +601,14 @@ The following is an incomplete guide to making and deploying a new release onto 
 
 [TODO: this was moved from the basic funcX k8s install sequence, because i don't think it is part of that - only when installing using AWS which is a special case of production]
 
-0. Update cloudformation stack if necessary [TODO: I think this is only for production deployment? ask Josh. In which case, ignore for personal dev cluster]
+0. Update cloudformation stack if necessary
+
+[TODO: I asked josh:
+Correct, if you are deploying locally there is nothing to do with cloudformation, and most of the time you deploy to either prod or dev you shouldn't need to mess with the CF stack unless you are changing configuration of the cluster itself or AWS managed services like rabbit or rds.
+]
+
+
+
 
 Here are the components that need updating as part of a release, in the order they should be updated
 due to dependencies. Note that only components that have changes for release need to updated and the
