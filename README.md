@@ -367,8 +367,9 @@ Here are a couple of links you could look at:
 
 * https://github.com/funcx-faas/funcX/blob/main/CONTRIBUTING.md
 
-* local_dev/README.md
+* this repo local_dev/README.md
 
+* this report cheatsheats/
 
 ### Forwarder Debugging
 
