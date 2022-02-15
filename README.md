@@ -129,7 +129,7 @@ There are various awful ways to do this. Some of them are here.
 * Ugly method 1
 
 ```
-# docker run --rm -ti funcx/kube-endpoint:main3.9 bash -l
+# docker run --rm -ti funcx/kube-endpoint:main-3.9 bash -l
 $ python3 -c "import funcx ; funcx.FuncXClient()"
 Please paste the following URL in a browser:
 https://auth.globus.org/v2/oauth2/authorize?client_id=.....
