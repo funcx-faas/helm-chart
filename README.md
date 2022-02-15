@@ -174,8 +174,6 @@ kubectl create secret generic funcx-sdk-tokens \
 
 ## Installing FuncX [TODO: "central services"? what's the right title vs the endpoint and client?]
 
-0. Update cloudformation stack if necessary [TODO: I think this is only for production deployment? ask Josh. In which case, ignore for personal dev cluster]
-
 1. Make a clone of this repository
 2. Download subcharts:
     ```shell script
@@ -600,6 +598,10 @@ ingress section above
 ## Making a release and deploying to the AWS clusters
 
 The following is an incomplete guide to making and deploying a new release onto our development or production clusters.
+
+[TODO: this was moved from the basic funcX k8s install sequence, because i don't think it is part of that - only when installing using AWS which is a special case of production]
+
+0. Update cloudformation stack if necessary [TODO: I think this is only for production deployment? ask Josh. In which case, ignore for personal dev cluster]
 
 Here are the components that need updating as part of a release, in the order they should be updated
 due to dependencies. Note that only components that have changes for release need to updated and the
