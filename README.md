@@ -361,6 +361,15 @@ print(fxc.get_result(result))
 If you have got this far, then you have successfully installed the current
 version of funcx, and can begin to hack.
 
+# I'm a developer whats next?!
+
+Here are a couple of links you could look at:
+
+* https://github.com/funcx-faas/funcX/blob/main/CONTRIBUTING.md
+
+* local_dev/README.md
+
+
 ### Forwarder Debugging
 
 > :warning: *Only for debugging*: You can set the forwarder curve server key manually by creating
