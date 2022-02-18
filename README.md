@@ -1,86 +1,172 @@
-# helm-chart
-Helm Chart for Deploying funcX stack
+# A Chart for Deploying the funcX stack
+
+## Who is this README for?
+
+This README is aimed at people who want to deploy funcX services into
+kubernetes, using the helm chart contained in this repository.
+
+The main part of the text is aimed at a new funcX developer making their
+first install for themselves to hack on.
+
+Other notes on the way talk about how the install can be made in the
+production system at AWS, and in development environments hosted at AWS.
 
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 [![NSF-2004894](https://img.shields.io/badge/NSF-2004894-blue.svg)](https://nsf.gov/awardsearch/showAward?AWD_ID=2004894)
 [![NSF-2004932](https://img.shields.io/badge/NSF-2004932-blue.svg)](https://nsf.gov/awardsearch/showAward?AWD_ID=2004932)
 
-This application includes:
+
+## Components
+
+A funcx install consists of a number of components, which will each be installed by this chart.
+
 * FuncX Web-Service
 * FuncX Websocket Service
 * FuncX Forwarder
-* Kuberentes endpoint
+* Kubernetes endpoint
 * Postgres database
 * Redis Shared Data Structure
 * RabbitMQ broker
 
-## Preliminaries
+## Kubernetes pre-requisites
 
-There are two modes in which funcx-endpoints could be deployed:
+You will need a Kubernetes (k8s) installation. There is no particularly
+favoured form of setup. Some ways used by funcX developers include:
 
-1. funcx-endpoint deployed outside k8s, connecting to hosted services in k8s
-2. funcx-endpoint deployed inside k8s
+* minikube on a hetzner cloud node
+* docker desktop
+* microk8s
 
-### Deploying funcx-endpoint outside of K8s
+You will also need `helm`.
 
----
-**NOTE**
+You will maybe need an ingress controller - traditionally people haven't been
+using one but we are pushing on that a bit. More later.
 
-This only works on Linux systems.
+### Example install of hetzner cloud + minikube
 
----
+TODO: minikube always/sometimes forgets its install on restart.
 
-Here are the steps to install, preferably into your active conda environment:
+This shows how @benclifford installed minikube on a hetzner cloud node as
+root:
 
-```shell script
-git clone https://github.com/funcx-faas/funcX.git
-cd funcX
-git checkout main
-pip install funcx_sdk
-pip install funcx_endpoint
+
+Base os: Ubuntu 20.04.03
+
+```
+# apt-get update
+# apt-get install docker.io
+# curl -LO https://storage.googleapis.com/minikube/releases/latest/minikube-linux-amd64
+# install minikube-linux-amd64 /usr/local/bin/minikube
+
+# apt-get install conntrack   # because: ❌  Exiting due to GUEST_MISSING_CONNTRACK: Sorry, Kubernetes 1.22.1 requires conntrack to be installed in root's path
+
+# minikube start --driver=none    # because i am root in a VM. otherwise apparently driver=docker might be nice? I haven't tried
 ```
 
-Next create an endpoint configuration:
+Now can run this to see some running pods. The `kube-system` namespace is for kubernetes system related pods. Later on, when funcx is installed, this command should also show funcx-related pods in the `default` namespace.
 
-```shell script
-funcx-endpoint
+```
+# minikube kubectl -- get pods -A
+NAMESPACE     NAME                                        READY   STATUS    RESTARTS   AGE
+kube-system   coredns-64897985d-9qhvm                     1/1     Running   0          5s
+kube-system   etcd-ubuntu-4gb-hel1-1                      1/1     Running   0          16s
+kube-system   kube-apiserver-ubuntu-4gb-hel1-1            1/1     Running   0          16s
+kube-system   kube-controller-manager-ubuntu-4gb-hel1-1   1/1     Running   0          18s
+kube-system   kube-proxy-cklqx                            1/1     Running   0          5s
+kube-system   kube-scheduler-ubuntu-4gb-hel1-1            1/1     Running   0          18s
+kube-system   storage-provisioner                         1/1     Running   0          15s
 ```
 
-Update the endpoint's configuration file to point the endpoint to locally
-deployed services, which we will setup in the next sections. If using default
-values, the funcx_service_address should be set to http://localhost:5000/v2.
+Now install helm, following debian/apt instructions here: https://helm.sh/docs/intro/install/
 
-`~/.funcx/default/config.py`
+```
+curl https://baltocdn.com/helm/signing.asc | sudo apt-key add -
+sudo apt-get install apt-transport-https --yes
+echo "deb https://baltocdn.com/helm/stable/debian/ all main" | sudo tee /etc/apt/sources.list.d/helm-stable-debian.list
+sudo apt-get update
+sudo apt-get install helm
+```
 
-```python
-    config = Config(
-    executors=[HighThroughputExecutor(
-        provider=LocalProvider(
-            init_blocks=1,
-            min_blocks=0,
-            max_blocks=1,
-        ),
-    )],
-    funcx_service_address="http://127.0.0.1:5000/api/v1", # <--- UPDATE THIS LINE
-)   
+How you can run this to see the default helm help text to check it was installed:
+
+
+```
+# helm
 ```
 
 
-### Deploying funcx-endpoint into the K8s deployment
+TODO: is there a "hello world" style helm+kubernetes validation that could be run so
+that we can say "you need helm+kubernetes at least good enough to do this:"
 
-We can deploy the kubernetes endpoint as a pod as part of the chart. It
-needs to have a valid copy of the funcx's `funcx_sdk_tokens.json` which can
-be created by running on your local workstation and running
-```shell script
- funcx-endpoint start
+
+Now clone the funcx helm repo (which you are reading this document from, perhaps).
+You can also use the equivalent ssh-based URL.
+
+```
+mkdir src
+cd src
+git clone https://github.com/funcx-faas/helm-chart
+cd helm-chart
 ```
 
-You will be prompted to follow the authorization link and paste the resulting
-token into the console. Once you do that, funcx-endpoint will create a
-`~/.funcx` directory and provide you with a token file.
+and run a helm command to update funcx dependencies:
 
-The Kubernetes endpoint expects this file to be available as a Kubernetes
-secret named `funcx-sdk-tokens`.
+```
+helm dependency update funcx
+```
+
+which will download some stuff. (TODO: what?)
+
+One note for later is this step downloads a funcx_endpoint chart: although
+this is funcX related, it is a separately versioned component because end users
+are expected to deploy the endpoint - unlike the funcX services that this
+current chart describes. (TODO: notes later for overriding this for
+development)
+
+
+### Creating endpoint secrets for a funcx endpoint in the K8s deployment
+
+There are various awful ways to do this. Some of them are here.
+
+* Ugly method 1
+
+```
+# docker run --rm -ti funcx/kube-endpoint:main-3.9 bash -l
+$ python3 -c "import funcx ; funcx.FuncXClient()"
+Please paste the following URL in a browser:
+https://auth.globus.org/v2/oauth2/authorize?client_id=.....
+```
+
+visit url
+
+paste code
+
+press enter
+
+```
+$ cat .funcx/credentials/funcx_sdk_tokens.json 
+{
+  "auth.globus.org": {
+    "scope": "openid",
+    "access_token": ...
+```
+
+Copy that file (eg via clipboard) somewhere safe and make it available
+in your minikube shell.
+
+* Ugly method 2
+
+If you have used funcx (endpoint or submit side) elsewhere, you can probably
+find suitable tokens in ~/.funcx/credentials/funcx_sdk_tokens.json in that
+environment.
+
+
+After getting the funcx_sdk_tokens.json file by hook or by crook, copy
+to a file called `funcx_sdk_tokens.json` - the name of this file is
+important as it will be used inside the created secret. Don't be
+tempted to call it `tmp.json` for example.
+
+Now create the kubernetes secret like this:
 
 You can install this secret with:
 ```shell script
@@ -88,33 +174,206 @@ kubectl create secret generic funcx-sdk-tokens \
   --from-file ~/.funcx/credentials/funcx_sdk_tokens.json
 ```
 
-## Installing FuncX
-0. Update cloudformation stack if necessary
+## Installing FuncX [TODO: "central services"? what's the right title vs the endpoint and client?]
+
 1. Make a clone of this repository
 2. Download subcharts:
     ```shell script
      helm dependency update funcx
     ```
 3. Create your own `values.yaml` inside the Git ignored directory `deployed_values/`
-4. Obtain Globus Client ID and Secret. These secrets need to exist in the
-   correct Globus Auth app. Ask for access to the credentials by contacting
-   https://github.com/BenGalewsky or sending a message to the `dev` funcx Slack
-   channel. Once you have your credentials, paste them into your `values.yaml`:
+     [forward reference to the two different values sections later on in this
+      document: should I just have the three lines mentioned here? or should I
+      be copy-pasting a huge example?]
+   [TODO: paragraph desribing what values.yaml will do]
+
+3a. mkdir deployed_values/
+
+3b. Obtain Globus Client ID and Secret for funcX. Get the credentials by asking on the
+   `dev` funcx Slack channel. This is distinct from the funcx credentials needed for the
+   endpoint, acquired in the previous section.
+
+   Once you have your credentials, paste them into your `values.yaml`:
     ```yaml
     webService:
       globusClient: <<your app client>>
       globusKey: <<your app secret>>
     ```
+
+   [TODO: there are plans afoot to make this different for developers. When
+   that is settled, can reuse deleted text, and elaborate:
+   These secrets need to exist in the correct Globus Auth app. 
+   ]
+
+3b. Configure endpoint UUID.
+
+    First generate a UUID, for example, by running `uuidgen` or `cat /proc/sys/kernel/random/uuid`.
+
+    Do not copy someone elses UUID from their example configuration. All kinds of subtle identity
+    problems will happen if you do. Similarly, if you make another endpoint install, do not re-use
+    the same UUID. UUIDs are cheap. If in doubt, generate a new one.
+
+    Paste the UUID into your values.yaml in an endpoint section:
+
+    ```
+    funcx_endpoint:
+        endpointUUID: XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX
+    ```
+
+3c Fix the funcx_endpoint image. By default this will install an image tag `main` which is
+hopelessly out of date and will result in obscure errors. [TODO: fix the endpoint default
+in endpoint chart, and remove the `main` tag image]
+
+Instead, override the image tag with an explicit python version. [TODO: it seems quite confused
+about what versions of python in each stage will work with each other. For now, try using a
+tag: main-3.9, like this:
+
+```
+funcx_endpoint:
+  endpointUUID: XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX
+  image:
+    pullPolicy: Always
+    tag: main-3.9
+
+```
+
+]
+
 5. Install the helm chart:
     ```shell script
-    helm install -f deployed_values/values.yaml funcx funcx
+    helm install --values deployed_values/values.yaml funcx funcx
     ```
-6. You can access your web service through the ingress or via a port forward
-to the web service pod. Instructions are provided in the displayed notes.
 
-7. You should be able to see the endpoint registering with the web service
+5b.
+now i see a bunch of services including a funcx endpoint, like this:
+
+```
+# minikube kubectl get pods
+NAME                                            READY   STATUS    RESTARTS         AGE
+funcx-endpoint-86756c48c8-flhqf                 1/1     Running   0                95m
+funcx-forwarder-db744678c-fqxhg                 1/1     Running   0                95m
+funcx-funcx-web-service-97585d958-6zrvh         1/1     Running   0                95m
+funcx-funcx-websocket-service-bb766fbcd-rvbgj   1/1     Running   0                95m
+funcx-postgresql-0                              1/1     Running   0                95m
+funcx-rabbitmq-0                                1/1     Running   0                95m
+funcx-redis-master-0                            1/1     Running   0                95m
+funcx-redis-slave-0                             1/1     Running   0                95m
+funcx-redis-slave-1                             1/1     Running   0                95m
+```
+
+6. You should be able to see the endpoint registering with the web service
 in their respective logs, along with the forwarder log. Check the endpoint's
 logs for its ID. 
+
+7. You can access your funcX services through the ingress or via a port forward
+to the web service pod. For port forwarding, instructions are provided in the displayed notes.
+Ingress configuration is described in the following section.
+
+## Exposing FuncX to external clients and endpoints
+
+You need to expose two ports from your cluster to clients. There are two ways:
+ingress and port-forward. These instructions talk about ingress, which is more
+complicated to set up but easier to maintain and closer to the production
+configuration. If you do not configure ingress, then the post-install notes
+output by `helm install` will tell you which port-forward commands to run.
+
+1. Install an ingress controller. Minikube and microk8s do this differently.
+
+1.a Minikube:
+
+Run this:
+
+```
+minikube addons enable ingress
+```
+
+1.b microk8s
+
+Run this:
+
+```
+microk8s enable ingress
+```
+
+Then configure microk8s to serve all namespaces. (by default, it only
+serves the `public` ingress class). [TODO: i need to write the exact commands for this]
+
+2. Get a hostname that your kubernetes install is accessible under.
+
+You can sometimes use `localhost` if you are running your client code on your local machine
+too. ** WARNING ** ingress-nginx in minikube doesn't always listen on the same address
+as "localhost" is bound to.
+
+Otherwise, figure out (using IP networking skills not described in this document)
+how you will address and name your kubernetes host.
+
+3. Enable ingress in the funcx install
+
+Edit `deployed_values/values.yaml` to enable funcx ingress and to tell funcx the
+host name from step 2.
+
+```
+ingress:
+  enabled: true
+  host: amber.cqx.ltd.uk   # <- this is the hostname you chose in step 2
+```
+
+4. Redeploy funcx
+
+```
+helm upgrade --atomic --values deployed_values/values.yaml funcx funcx
+```
+
+5. You should now see the ingress definition in kubernetes:
+
+```
+# kubectl get ingress
+NAME                  CLASS    HOSTS              ADDRESS   PORTS   AGE
+funcx-funcx-ingress   <none>   amber.cqx.ltd.uk             80      11d
+
+```
+
+
+### Connecting clients
+
+Create a `FuncXClient` instance pointing at your install, by specifying the funcx_service_address,
+
+```
+fxc = FuncXClient(funcx_service_address="http://localhost/v2")   # <- this is also the hostname you chose in step 2
+```
+
+and by specifying your endpoint UUID (generated earlier) when invoking a function.
+
+Run the same sort of tests as can happen against the tutorial endpoint. For example:
+
+```
+from funcx.sdk.client import FuncXClient
+
+fxc = FuncXClient(PARMS HERE)
+
+def hello_world():
+  return "Hello World!"
+
+func_uuid = fxc.register_function(hello_world)
+
+tutorial_endpoint = 'YOUR-ENDPOINT-UUID-HERE'
+result = fxc.run(endpoint_id=tutorial_endpoint, function_id=func_uuid)
+
+print(fxc.get_result(result))
+```
+
+If you have got this far, then you have successfully installed the current
+version of funcx, and can begin to hack.
+
+# I'm a developer whats next?!
+
+Here are a couple of links you could look at:
+
+* https://github.com/funcx-faas/funcX/blob/main/CONTRIBUTING.md
+
+* this repo local_dev/README.md
+
+* this report cheatsheats/
 
 ### Forwarder Debugging
 
@@ -148,7 +407,13 @@ overridden per-deployment by placing replacements in the non-version-controlled
 `deployed_values/values.yaml` - for example, the globusClient/globusKey values
 earlier in the install instructions.
 
-This is a recommended initial set of values to override:
+This is a recommended [TODO: by whom?] initial set of values to override:
+
+should I use the following values.yaml or the values.yaml I was told to make earlier?
+dedupe - and if this section is the values.yaml i should be using, move it up to
+where i am told to create the values.yaml
+
+eg. why do I need to be exposing postgres to the internet?
 
 ``` yaml
 webService:
@@ -175,7 +440,9 @@ rabbitmq:
   pullPolicy: Always
 ```
 
-Here are some values that can be overriden:
+Here are some more values that can be set to adjust the deployed system
+configuration:
+
 
 | Value                          | Desciption                                                          | Default           |
 | ------------------------------ | ------------------------------------------------------------------- | ----------------- |
@@ -214,6 +481,7 @@ Here are some values that can be overriden:
 
 
 ## Sealed Secrets
+[TODO: why would i want to do this?]
 The chart can take advantage of Bitnami's sealed secrets controller to encrypt
 sensitive config data so it can safely be checked into the GitHub repo.
 
@@ -295,8 +563,8 @@ EOF
 
 ## Subcharts
 This chart uses two subcharts to supply dependent services. You can update
-settings for these by referenceing the subchart name and values from
-their READMEs.
+settings for these by referencing the subchart name and values from
+their READMEs. [TODO: also the funcx endpoint subchart?]
 
 For example
 ``` yaml
@@ -317,7 +585,7 @@ In the scripts directory there is `psql-busybox.yaml`. Create the pod with
 $ kubectl create -f scripts/psql-busybox.yaml
 ```
 
-You can then create a shell with `kubectl exec -it psql bash`
+You can then create a shell with `kubectl exec -it plsql bash`
 
 Inside that shell there is a fun pg sql client which can be invoked with the
 same Postgres URL found in the web app's config file (`/opt/funcx/app.conf`)
@@ -325,12 +593,36 @@ same Postgres URL found in the web app's config file (`/opt/funcx/app.conf`)
 ```console
 pgcli postgresql://funcx:XXXXXXXXXXXX@funcx-production-db.XXXXXX.rds.amazonaws.com:5432/funcx
 ```
+[if this is intended to be used inside a dev cluster, is there a better way to name
+the DB than this rd.amazonaws url?
+
+Where does the XXXX password come from in a dev cluster?
+Here's a better command line for my minikube setup:
+
+root@plsql:/# pgcli postgresql://funcx:leftfoot1@funcx-postgresql:5432/public
 
 
-## Deployment/Release Guide
+
+## Upgrades
+[TODO: crossref/ incorporate text from the helm upgrade that happens in the
+ingress section above
+]
 
 
-The following is an incomplete guide to deploying a new release onto our development or production clusters.
+## Making a release and deploying to the AWS clusters
+
+The following is an incomplete guide to making and deploying a new release onto our development or production clusters.
+
+[TODO: this was moved from the basic funcX k8s install sequence, because i don't think it is part of that - only when installing using AWS which is a special case of production]
+
+0. Update cloudformation stack if necessary
+
+[TODO: I asked josh:
+Correct, if you are deploying locally there is nothing to do with cloudformation, and most of the time you deploy to either prod or dev you shouldn't need to mess with the CF stack unless you are changing configuration of the cluster itself or AWS managed services like rabbit or rds.
+]
+
+
+
 
 Here are the components that need updating as part of a release, in the order they should be updated
 due to dependencies. Note that only components that have changes for release need to updated and the
@@ -366,7 +658,7 @@ rest can safely be skipped:
 * Update the values to use the release branchnames as the new tags
 
 * Deploy with:
-    >> helm upgrade -f prod-values.yaml funcx funcx
+    >> helm upgrade --values prod-values.yaml funcx funcx
 
 > :warning: It is preferable to upgrade rather than blow away the current deployment and redeploy
     because, wiping the current deployment loses state that ties the Route53 entries to point at
@@ -413,7 +705,402 @@ postgres, and rabbitmq) running at a specified host under `*.api.dev.funcx.org`.
       subnets: subnet-0c0d6b32bb57c39b2, subnet-0906da1c44cbe3b8d
       use_alb: true
 * Install the helm chart as described above, but specifying the new `values.yaml` file 
-  and the namespace. E.g.: `helm install -f deployed_values/values.yaml josh-funcx funcx --namespace`
+  and the namespace. E.g.: `helm install --values deployed_values/values.yaml josh-funcx funcx --namespace`
 * Create a new route53 record for the given host (josh-test.dev.funcx.org).  
   We won't have to do this after [external dns](https://kubernetes-sigs.github.io/aws-load-balancer-controller/v2.2/guide/integrations/external_dns/) has been enabled.
+
+
+## Advanced option: Deploying a funcx-endpoint outside of K8s
+
+The above notes installed a funcx endpoint inside kubernetes, alongside the funcx services.
+In real life, end users would install funcx endpoints elsewhere (on their compute
+resources) and attach them to the officially funcx services.
+
+It is also possible to install an endpoint elsewhere and attach it to services
+deployed by this chart for dev purposes.
+
+---
+**NOTE**
+
+This only works on Linux systems.
+
+---
+
+Here are the steps to install, preferably into your active conda environment:
+
+```shell script
+git clone https://github.com/funcx-faas/funcX.git
+cd funcX
+git checkout main
+pip install funcx_sdk
+pip install funcx_endpoint
+```
+
+Next create an endpoint configuration:
+
+```shell script
+funcx-endpoint
+```
+
+Update the endpoint's configuration file to point the endpoint to locally
+deployed services, which we will setup in the next sections. If using default
+values, the funcx_service_address should be set to http://localhost:5000/v2.
+
+`~/.funcx/default/config.py`
+
+```python
+    config = Config(
+    executors=[HighThroughputExecutor(
+        provider=LocalProvider(
+            init_blocks=1,
+            min_blocks=0,
+            max_blocks=1,
+        ),
+    )],
+    funcx_service_address="http://127.0.0.1:5000/api/v1", # <--- UPDATE THIS LINE
+)   
+```
+
+
+
+## See also
+
+More notes in the local_dev/ subdirectory that should be merged into this file
+
+
+
+# Assorted benc notes
+
+this gets as far as submitting for me, but attempts to get the result always give
+funcx.utils.errors.TaskPending: Task is pending due to waiting-for-nodes
+
+There's a pod started up ok - called funcx-1631645705407 without any more interesting name. i guess thats a worker? after 106s all that is in the logs is a warning from pip running as root
+- but i can see pip running.
+
+So i should put a note here about how long things might take here?
+Note that it has changes from waiting-for-ep in the error to waiting-for-nodes
+after several minutes, so there is more stuff going on, slowly... 5m later and its still churning. it's had one restart 63s ago... nothing clear about *why* it restarted though.
+in kubectl describe pod XXXXX I can see the commandline - a pip install and then a funcx-manager.
+It seems to end with: PROCESS_WORKER_POOL main event loop exiting normally
+
+So lets debug a bit more about where the task execution happens or not.
+
+Is this doing a pip install on every restart (?!) - that's a question to ask.
+(maybe it's not actually installing new stuff though - which is why i'm not seeing any
+packages being installed on subsequent runs)
+
+Eventually it went into "CrashLoopBackOff" at the kubernetes level, which maybe isn't the right behaviour for "exiting normal" at the PROCESS_WORKER_POOL level? Ask on chat about that.
+
+There's nothing in the endpoint logs about starting up that funcx process worker container, or about jobs happening - just every 600s a keepalive message
+
+Digging into the endpoint container environment, find ~/.funcx/funcx/EndpointInterchange.log
+which is reporting a sequence of errors:
+
+2021-09-15 14:26:55.592 funcx_endpoint.executors.high_throughput.executor:540 [WARNING]  [MTHR
+EAD] Executor shutting down due to version mismatch in interchange
+2021-09-15 14:26:55.610 funcx_endpoint.executors.high_throughput.executor:542 [ERROR]  [MTHREA
+D] Exception: Task failure due to loss of manager b'18e00d57935c'
+NoneType: None
+2021-09-15 14:26:55.610 funcx_endpoint.executors.high_throughput.executor:577 [INFO]  [MTHREAD
+] queue management worker finished
+
+then every 10ms this message *forever* 2021-09-15 14:26:55.613 funcx_endpoint:504 [ERROR]  [MAIN] Something broke while forwarding re
+sults from executor to forwarder queues
+Traceback (most recent call last):
+  File "/usr/local/lib/python3.7/site-packages/funcx_endpoint/endpoint/interchange.py", line 4
+90, in _main_loop
+    results = self.results_passthrough.get(False, 0.01)
+  File "/usr/local/lib/python3.7/multiprocessing/queues.py", line 108, in get
+    res = self._recv_bytes()
+  File "/usr/local/lib/python3.7/multiprocessing/connection.py", line 216, in recv_bytes
+    buf = self._recv_bytes(maxlength)
+  File "/usr/local/lib/python3.7/multiprocessing/connection.py", line 407, in _recv_bytes
+    buf = self._recv(4)
+  File "/usr/local/lib/python3.7/multiprocessing/connection.py", line 383, in _recv
+    raise EOFError
+EOFError
+
+- that kind of failure should be resulting in a kubernetes level restart (or some other exit/restart) not a hang loop like this?
+- mismatch of what? between who? is it the process worker pool container vs the funcx container?  Looking at interchange.py - this might not even be from a version mismatch: it can happen if reg_flag is false (due to a json deserialisation problem in registration message). Other than that, it can happen because the python versions from the manager vs the interchange.
+
+I commented on these logs not being obvious, in slack, and ben g gave me:
+> so for debugging, I added a value to the endpoint helm chart detachEndpoint -since the endpoint runs in a daemon, the output doesn’t show up in the pod’s logs.. Setting this to false means the endpoint runs in the main thread. Less reliable, but easy for debugging
+
+I haven't tried that yet. But if its good, then... if k8s endpoints are also expected for end users, maybe they should also get the same functionality? (eg why is this running as a daemon when its inside a pod anyway managing that?)
+
+whle the task on the client side still reports:
+funcx.utils.errors.TaskPending: Task is pending due to waiting-for-ep
+
+At the same time, the process worker service repeatedly exits and is restarted by kubernetes (with it eventually hitting CrashLoopBackOff to slow this down) - presumably that's somehow opposite half of this same error message, but it isn't clear. The entire log file is:
+
+root@amber:~# minikube kubectl logs -- funcx-1631715998878
+WARNING: Running pip as the 'root' user can result in broken permissions and conflicting behaviour with the system package manager. It is recommended to use a virtual environment instead: https://pip.pypa.io/warnings/venv
+PROCESS_WORKER_POOL main event loop exiting normally
+root@amber:~# 
+
+I found a more interesting log file here:
+/home/funcx/.funcx/funcx/HighThroughputExecutor/worker_logs/8e8f66c705d3/manager.log
+
+which eventully reports a critical error that the interchange heartbeat is missing - not at all like the kubectl log error of: ... exiting normally.
+
+It's a bit weird to be 2 minutes in before the manager even notices that the interchange isn't even alive.
+
+So... the version mismatch:
+This is invoking python:3.6-buster - so let's track down where that was.
+
+Selecting the correct image (eg for AWS AMIs, not docker images) has been a massive
+usability problem for testing parsl on image based systems... I'm not sure how much it
+matters in end-use though, if you're assuming that users make app-specific images that
+are tied to their own environment? I don't have experience there.  I haven't spent any
+time seriously trying to solve this for parsl, but eg ZZ did container stuff for parsl
+so I'd be interested to here any of his relevant experiences. not really a  problem
+i am interested in solving.
+
+so grep around in the source tree for python:3.6-buster
+
+The funcx endpoint helm chart is coming from a URL on funcx.org, not the helm-charts repo,
+under here: http://funcx.org/funcx-helm-charts
+
+There's a 0.3 chart in the funcx-helm-charts repo by the looks of it - perhaps I can try that, by hacking at the server-side chart. What's the right way to be controlling this?
+
+While checking if process claims to be alive, the endpoint output line:
+"funcx-endpoint process is still alive. Next check in 600s." 
+should be given a timestamp - it doesn't seem to go through the logging mechanism so
+is not getting a timestamp that way. So I have no idea when it last ran, or if its
+an outdated message, etc.
+
+This command to install the worker inside the worker container is installing funcx-endpoint and directing the output to a file called =0.2.0. That is probably not what is intended. Put the whole thing in ' marks perhaps.
+
+      pip install funcx-endpoint>=0.2.0
+
+This is in the funcx endpoint helm chart... along with the naughty command right next
+to it:
+workerImage and 
+workerInit
+so I should be able to override those myself in my values.yaml?
+
+funcx_endpoint:
+  workerImage: python:3.7-buster
+  workerInit: 'pip install "funcx-endpoint>=0.2.0"'
+
+note that workerInit is embedded python string syntax, not a plain string, so
+you can't use ' marks inside it because it is substituted in somewhere I think
+and that causes a syntax error - eg try the above line with " and ' swapped
+and see:
+"""
+File "/home/funcx/.funcx/funcx/config.py", line 24
+    worker_init='pip install 'funcx-endpoint>=0.2.0'',
+                                  ^
+SyntaxError: invalid syntax
+"""
+because string substitution into source without proper escaping.
+
+This could be fixed - either by reading the string from a different place and
+not doing python source substitution, or by performing escaping on the string.
+This behaviour is likely to cause trouble to anyone doing non-trivial bash
+in their worker_init.
+
+it's frustrating that the python version is not set to the version that
+is actually used by the endpoint.
+]
+
+===
+
+How does I upgrade this? It was installed using the latest images at install time I guess?
+I see a funcx-web-service tag from 15h ago after running helm upgrade funcx funcx...
+(imgage ID d21432c1525a) - so is that what is running now? looks like it pulled a new image when I rebooted the server (!)
+
+That seems a bit chaotic. And how do I switch these to using my own source builds?
+
+
+python versions:
+ The endpoint repo funcX/Dockerfile-endpoint defaults to building with python 3.8.
+ That doesn't align with the python that is being supplied by the helm images.
+ So rebuild my client, specifying 3.7.
+
+Perhaps funcx/Dockerfile-endpoint should force the user to choose, rather than building
+a likely invalid one.
+
+The broad topic here is python versions are poorly co-ordinated as supplied - yes, they
+have to align, but the defaults supplied should all align with each other at least.
+(they need to align across all three of: the submitting client, the endpoint, the
+endpoint workers, and all three are wrong by default)
+
+
+Python mismatch between interchange and worker pod results in an eternal hang: interchange reports inside its endpoint logs that there's a version mismatch (but not what the version mismathc is). The worker just restarts every couple of minutes with missing heartbeat: no description of *why* the heartbeat is missing. The end user is never informed of anything more than "waiting for nodes". It's unclear to me if that should be a richer message or a richer hard error: could tell user that the worker version is wrong at least, becaues that is likely an error that won't fix itself (i.e. is not a transient error). Richer error here would help the submitting user understand that they need to contact the endpoint administrator for rectification and what to tell them, beyond "waiting for nodes".
+
+
+funcx endpoint worker pods lose their logs at each restart - which is awkward to examine when the logs are in an every-two-minutes restart loop due to missing heartbeat. debuggability might be enhanced by putting them in a pod-lifetime dir rather than a container-lifetime dir? [should they even be autorestarting in that situation, rather than letting the endpoint handle restarting them if it still wants them? - c.f. parsl discussion about how kubernetes pods are managed by the parsl kubernetes provider?] 
+
+
+
+## Upgrading and developing against non-main environments
+
+i've been trying this but it's not clear that it is pulling down the latest of
+everything: (I think it does, but just the images are not changing often
+upstream from me?)
+ helm upgrade -f deployed_values/values.yaml funcx funcx --recreate-pods
+
+## Python version notes
+
+this is important for not having errors, so probably should be near the top.
+
+there are three different places where the python interpreter must be the same
+major version (eg all 3.7). the tooling as it is now does not make that the
+case by default - [TODO: make it so]
+
+- the endpoint worker
+- the endpoint
+- the submitting user python env
+
+TODO: make this consistent for a first time install experience: either describe
+how to configure it in all three places, or make the defaults/documented
+command lines make that happen.
+
+The setup as I came to it is installing 3 different incompatible python version
+without telling me not to.
+
+## Port notes
+
+nmap of amber.cqx.ltd.uk:
+
+```
+$ nmap amber.cqx.ltd.uk -p- -4
+
+Starting Nmap 7.40 ( https://nmap.org ) at 2021-09-20 19:41 UTC
+Nmap scan report for amber.cqx.ltd.uk (65.108.55.218)
+Host is up (0.055s latency).
+Other addresses for amber.cqx.ltd.uk (not scanned): 2a01:4f9:c010:e030::1
+Not shown: 65522 closed ports
+PORT      STATE SERVICE
+22/tcp    open  ssh
+2379/tcp  open  etcd-client
+2380/tcp  open  etcd-server
+6000/tcp  open  X11
+8000/tcp  open  http-alt
+8080/tcp  open  http-proxy
+8443/tcp  open  https-alt
+10249/tcp open  unknown
+10250/tcp open  unknown
+10256/tcp open  unknown
+55001/tcp open  unknown
+55002/tcp open  unknown
+55003/tcp open  unknown
+
+```
+
+The above notes have two ports forwarded manually using kubectl port forwarding each time.
+
+funcx-forwarder is configured to expose a number of ports, 55002-55005.
+
+but in its environment, it declares these: which don't quite align.
+it declares these:
+      TASKS_PORT:                    55001
+      RESULTS_PORT:                  55002
+      COMMANDS_PORT:                 55003
+as well as 8080
+
+As far as remote nmap is concerned, 55001-3 are exposed, not -4 and -5.
+
+So what's the configuration divergence here? (is there unnecessary configuration of those
+ports, seeing as 55001 is finding its way in there anyway?)
+
+the funcx-forwarder service lists 55001, 55003, 55005
+which is a *third* combination of those different ports. (!)
+they're labelled in the service as zmq1, zmq2, zmq3
+
+... is the forwarder running in some weird non-kubernetes network env? (eg the host native network env?)  it appears to have an IP: field described in the pod:
+IP:           65.108.55.218
+IPs:
+  IP:           65.108.55.218
+
+and the chart has "hostNetwork: true"
+ - so all the port forwards that its doing in the 55000...whatever range are unneeded I guess and thats why it doesn't matter that they're messed up?
+
+[TODO: understand and rationalise that configuration. if this is always host network,
+are any of those other port descriptions necessary at all? not in the minikube case
+I think, but what about in real deployment]
+
+what do the ports: declarations do in  funcx/templates/forwarder-deployment.yaml anyway?
+it looks like they're explicitly adding on 1 to the actual values ??
+
+These ports look like harmless fluff that is intellectually taxing/wasteful on someone
+trying to understand... is that true?
+
+Who is communicating with the forwarder?
+
+
+TODO: If these ports can be configured publicly, can the ports for the web service
+and websockets service also be configured that way?  What's the difference between
+the web(sockets) ports and the forwarder ports?  On the production system are they
+made fully public in different ways?
+
+
+## web-service build (and check others?) has a requiremenets.txt which
+installs from git funcx api main
+
+docker build doesn't invalidate the cache as the api main tag advances,
+becaues the command is not changed, and so rebuilds are not built with the
+latest main.
+
+this is terrible and obscure and i only noticed it randomly in passing.
+
+===
+> docker build --no-cache -t funcx-web-service  is my default
+￼
+says yadu.
+ - this has gone into the helm-chart Makefile documentation already
+===
+
+===
+microk8s ingres (with ingress PR applied...)
+install microk8s ingress. this puts in a DaemonSet that launches the ingress controller.
+this needs editing:
+
+root@pearl:~# microk8s kubectl get daemonset -n ingress
+NAME                                DESIRED   CURRENT   READY   UP-TO-DATE   AVAILABLE   NODE SELECTOR   AGE
+nginx-ingress-microk8s-controller   1         1         1       1            1           <none>          12d
+
+~/kubectl edit daemonset nginx-ingress-microk8s-controller  -n ingress
+
+edit eg the container port (for @sirosen's use case, but not otherwise):
+          ports:
+          - containerPort: 80
+            hostPort: 81
+            name: http
+            protocol: TCP
+          - containerPort: 443
+            hostPort: 443
+            name: https
+            protocol: TCP
+
+and somewhere (perhaps the container args in that daemonset) remove the restriction on running 
+
+
+
+===
+
+# dockerfile endpoint in funcx vs python version
+should force choice of python rather than defaulting to some rando version that
+doesn't make sense:
+--- a/Dockerfile-endpoint
++++ b/Dockerfile-endpoint
+@@ -1,4 +1,5 @@
+-ARG PYTHON_VERSION="3.8"
++ARG PYTHON_VERSION
++# eg PYTHON_VERSION="3.8"
+
+
+
+# PRs and issues opened
+
+https://github.com/funcx-faas/helm-chart/pull/36 (websockets installed from wrong tag)
+
+https://github.com/funcx-faas/helm-chart/pull/39 (tidy up suggested values documentation)
+
+https://github.com/funcx-faas/funcX/issues/600   (duplicate pod names - dupe of existing parsl issue)
+
+https://github.com/funcx-faas/funcX/issues/601 (broken k8s worker pods accumulate forever)
+
+
 
