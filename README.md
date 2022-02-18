@@ -44,6 +44,8 @@ using one but we are pushing on that a bit. More later.
 
 ### Example install of hetzner cloud + minikube
 
+TODO: minikube always/sometimes forgets its install on restart.
+
 This shows how @benclifford installed minikube on a hetzner cloud node as
 root:
 
@@ -239,7 +241,7 @@ funcx_endpoint:
 
 5. Install the helm chart:
     ```shell script
-    helm install -f deployed_values/values.yaml funcx funcx
+    helm install --values deployed_values/values.yaml funcx funcx
     ```
 
 5b.
@@ -298,8 +300,9 @@ serves the `public` ingress class). [TODO: i need to write the exact commands fo
 
 2. Get a hostname that your kubernetes install is accessible under.
 
-You can use `localhost` if you are running your client code on your local machine
-too.
+You can sometimes use `localhost` if you are running your client code on your local machine
+too. ** WARNING ** ingress-nginx in minikube doesn't always listen on the same address
+as "localhost" is bound to.
 
 Otherwise, figure out (using IP networking skills not described in this document)
 how you will address and name your kubernetes host.
@@ -318,7 +321,7 @@ ingress:
 4. Redeploy funcx
 
 ```
-helm upgrade --atomic -f deployed_values/values.yaml funcx funcx
+helm upgrade --atomic --values deployed_values/values.yaml funcx funcx
 ```
 
 5. You should now see the ingress definition in kubernetes:
@@ -329,6 +332,7 @@ NAME                  CLASS    HOSTS              ADDRESS   PORTS   AGE
 funcx-funcx-ingress   <none>   amber.cqx.ltd.uk             80      11d
 
 ```
+
 
 ### Connecting clients
 
@@ -654,7 +658,7 @@ rest can safely be skipped:
 * Update the values to use the release branchnames as the new tags
 
 * Deploy with:
-    >> helm upgrade -f prod-values.yaml funcx funcx
+    >> helm upgrade --values prod-values.yaml funcx funcx
 
 > :warning: It is preferable to upgrade rather than blow away the current deployment and redeploy
     because, wiping the current deployment loses state that ties the Route53 entries to point at
@@ -701,7 +705,7 @@ postgres, and rabbitmq) running at a specified host under `*.api.dev.funcx.org`.
       subnets: subnet-0c0d6b32bb57c39b2, subnet-0906da1c44cbe3b8d
       use_alb: true
 * Install the helm chart as described above, but specifying the new `values.yaml` file 
-  and the namespace. E.g.: `helm install -f deployed_values/values.yaml josh-funcx funcx --namespace`
+  and the namespace. E.g.: `helm install --values deployed_values/values.yaml josh-funcx funcx --namespace`
 * Create a new route53 record for the given host (josh-test.dev.funcx.org).  
   We won't have to do this after [external dns](https://kubernetes-sigs.github.io/aws-load-balancer-controller/v2.2/guide/integrations/external_dns/) has been enabled.
 
