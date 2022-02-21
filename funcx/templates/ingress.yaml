@@ -12,6 +12,7 @@ metadata:
     alb.ingress.kubernetes.io/subnets: {{ .Values.ingress.subnets }}
     alb.ingress.kubernetes.io/load-balancer-attributes: routing.http2.enabled=true
     alb.ingress.kubernetes.io/load-balancer-name: {{ .Release.Name }}-{{ .Values.ingress.name }}
+    external-dns.alpha.kubernetes.io/hostname: {{ .Values.ingress.host }}
 {{- else }}
     kubernetes.io/ingress.class: nginx
 {{- end }}
