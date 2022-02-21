@@ -40,6 +40,8 @@ spec:
     {{- else }}
           value: "{{  .Values.services.rabbitmq.externalURI }}"
     {{- end }}
+        - name: RABBITMQ_QUEUE_TTL
+          value: "{{  .Values.services.rabbitmq.queueTTL }}"
         - name: WEB_SERVICE_URI
           value: "http://{{ .Release.Name }}-funcx-web-service:8000"
 
